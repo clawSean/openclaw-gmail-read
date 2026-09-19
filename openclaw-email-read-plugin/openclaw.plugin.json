@@ -1,0 +1,71 @@
+{
+  "id": "screened-gmail-read",
+  "name": "Screened Gmail Read",
+  "version": "0.2.0",
+  "description": "Summarize Gmail through a Mac-local pre-screen, zero-tool summarizer, and independent post-summary gate.",
+  "contracts": {
+    "tools": ["gmail_read_screened"]
+  },
+  "activation": {
+    "onStartup": false,
+    "onCommands": ["gmailread"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "defaultNodeId": {
+        "type": "string",
+        "default": "",
+        "description": "Required paired macOS node id for the broker runtime."
+      },
+      "defaultAccount": {
+        "type": "string",
+        "default": "sean",
+        "description": "Default Gmail read account label passed to the Mac broker."
+      },
+      "macBrokerPython": {
+        "type": "string",
+        "default": "python3",
+        "description": "Python interpreter used on the macOS node."
+      },
+      "macBrokerScriptPath": {
+        "type": "string",
+        "default": "/Users/Sean/projects/openclaw-gmail-read/mac_email_read_broker.py",
+        "description": "Absolute path to mac_email_read_broker.py on the macOS node."
+      },
+      "invokeTimeoutMs": {
+        "type": "number",
+        "default": 120000,
+        "description": "Node invoke timeout for broker calls."
+      },
+      "summarizerModel": {
+        "type": "string",
+        "default": "claude/claude-haiku-4-5",
+        "description": "Zero-tool isolated summarizer model."
+      },
+      "postDetectorModel": {
+        "type": "string",
+        "default": "openai/gpt-5.6-luna",
+        "description": "Distinct zero-tool source-vs-summary detector model."
+      },
+      "summaryTimeoutMs": {
+        "type": "number",
+        "default": 30000,
+        "minimum": 1000,
+        "maximum": 60000,
+        "description": "Timeout for each isolated model call."
+      }
+    }
+  },
+  "uiHints": {
+    "defaultNodeId": { "label": "Default macOS node" },
+    "defaultAccount": { "label": "Default Gmail account" },
+    "macBrokerPython": { "label": "Mac broker Python" },
+    "macBrokerScriptPath": { "label": "Mac broker script path" },
+    "invokeTimeoutMs": { "label": "Invoke timeout (ms)" },
+    "summarizerModel": { "label": "Summarizer model" },
+    "postDetectorModel": { "label": "Post-detector model" },
+    "summaryTimeoutMs": { "label": "Summary timeout (ms)" }
+  }
+}

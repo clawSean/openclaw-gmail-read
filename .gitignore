@@ -1,0 +1,21 @@
+# AID operating floor (private, local-only)
+/VISION.md
+/STATUS.md
+/LOG.md
+/DECISIONS.md
+/CONTRIBUTING.md
+/ROADMAP.md
+/rollouts/
+/RESOURCES.md
+/resources/
+# Secrets and local state
+.env
+.env.*
+!.env.example
+*.secret
+*.pem
+secrets/
+tmp/
+scratch/
+__pycache__/
+*.pyc
