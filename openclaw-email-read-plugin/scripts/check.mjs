@@ -8,8 +8,8 @@ const manifest = JSON.parse(await readFile(new URL("openclaw.plugin.json", root)
 const mod = await import(pathToFileURL(new URL("src/index.js", root).pathname));
 
 assert.equal(manifest.id, "screened-gmail-read");
-assert.equal(manifest.version, "0.3.0");
-assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.3.0");
+assert.equal(manifest.version, "0.4.0");
+assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.4.0");
 assert.equal(typeof mod.default, "function");
 assert(source.includes("isolated-agent-runtime"));
 assert(!source.includes("unsafe-no-detector"));
@@ -31,7 +31,7 @@ function brokerPayload(body = "Quarterly report is ready. Please review by Frida
   return {
     status: "ok",
     broker: "mac_email_read_broker",
-    broker_version: "1.1.0",
+    broker_version: "1.2.0",
     data: {
       id: "m-1",
       from: "Alex <alex@example.com>", from_verdict: "SAFE",

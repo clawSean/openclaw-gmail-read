@@ -1,6 +1,6 @@
 {
   "name": "openclaw-email-read-plugin",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "OpenClaw plugin for isolated, pre/post-screened Gmail summaries",

@@ -5,7 +5,7 @@ Date: 2026-09-21
 ## Identity and source
 
 - Plugin id: `screened-gmail-read`
-- Version: `0.3.0`
+- Version: `0.4.0`
 - Canonical source: `openclaw-email-read-plugin/`
 - Runtime discovery source resolves to this project tree.
 - Dependencies: none.
@@ -24,7 +24,7 @@ Date: 2026-09-21
 
 ## Proof
 
-- `python3 -m unittest discover -s tests -v`: 12/12 passed.
+- `python3 -m unittest discover -s tests -v`: 18/18 passed.
 - `npm --prefix openclaw-email-read-plugin run check`: passed.
 - `openclaw config validate --json`: valid; expected disabled-plugin warning.
 - `openclaw plugins inspect screened-gmail-read --json`: canonical source
@@ -32,7 +32,6 @@ Date: 2026-09-21
 
 ## Missing live proof
 
-- The local Ollama detector model is not installed.
 - Gmail-read account entries remain `can_read: false`, retain stale Linux
   credential paths, and have no read OAuth token on this Mac.
 - No plugin activation, Gateway restart, Gmail read, or real-email canary was

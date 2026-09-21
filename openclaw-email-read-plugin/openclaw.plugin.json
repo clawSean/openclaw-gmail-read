@@ -1,7 +1,7 @@
 {
   "id": "screened-gmail-read",
   "name": "Screened Gmail Read",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Summarize Gmail through a Mac-local pre-screen, zero-tool summarizer, and independent post-summary gate.",
   "contracts": {
     "tools": ["gmail_read_screened"]

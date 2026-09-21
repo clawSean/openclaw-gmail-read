@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const NODE_COMMAND = "screened-gmail-read.broker";
 const DEFAULT_SCRIPT_PATH = "/Users/Sean/projects/openclaw-gmail-read/mac_email_read_broker.py";
-const EXPECTED_BROKER_SHA256 = "82a43f8629f1647588ee0a84ba55a5f9cab69821c53d9846f341b930f56ed675";
+const EXPECTED_BROKER_SHA256 = "4251c064639993566427df4f859a3752935274e4dc3b914b02049deccf126af5";
 const DEFAULT_PYTHON = "python3";
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_SUMMARY_TIMEOUT_MS = 30000;
@@ -277,7 +277,7 @@ async function summarizeAndGate(api, sourceText, pluginConfig) {
 }
 async function processBrokerPayload(api, request, payload) {
   if (!payload || payload.status !== "ok") throw new Error("BROKER_FAILED");
-  if (payload.broker !== "mac_email_read_broker" || payload.broker_version !== "1.1.0") throw new Error("BROKER_ATTESTATION_MISMATCH");
+  if (payload.broker !== "mac_email_read_broker" || payload.broker_version !== "1.2.0") throw new Error("BROKER_ATTESTATION_MISMATCH");
   const entries = Array.isArray(payload.data) ? payload.data : [payload.data];
   if (entries.length > MAX_LIST_LIMIT) throw new Error("BROKER_RESULT_LIMIT");
   const pluginConfig = getPluginConfig(api);

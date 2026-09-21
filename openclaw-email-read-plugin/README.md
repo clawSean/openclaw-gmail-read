@@ -15,6 +15,9 @@ native zero-tool Luna completion, strict deterministic validation, and a
 fresh zero-tool Luna relay detector. Raw source and blocked candidates are not
 returned in tool details.
 
+The broker uses deterministic local tripwires and has no Ollama or local-model
+runtime dependency.
+
 Defaults:
 
 - account: `sean`

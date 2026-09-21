@@ -6,7 +6,7 @@ summaries without exposing raw email to a tool-capable parent agent.
 ## Security shape
 
 ```text
-Gmail readonly → Mac broker → sanitize + pre-screen → zero-tool Luna summary
+Gmail readonly → Mac broker → sanitize + deterministic tripwires → zero-tool Luna summary
                → deterministic schema/evidence gate → fresh Luna relay gate
                → explicitly untrusted envelope
 ```
@@ -21,6 +21,8 @@ This remains disabled until the separate activation checklist is completed.
 
 - `mac_email_read_broker.py` — Mac-local Gmail fetch, normalization, pre-screen,
   scope enforcement, and append-only audit.
+- `scripts/bootstrap_gmail_read_oauth.py` — local PKCE OAuth bootstrap that
+  requests only Gmail read-only plus identity scopes and never prints tokens.
 - `openclaw-email-read-plugin/` — native node invocation plus isolated OpenClaw
   model completions and the post-summary gate.
 - `tests/` — offline Python security tests.
@@ -34,6 +36,25 @@ cd openclaw-email-read-plugin && npm run check
 ```
 
 No test reads Gmail, OAuth material, or live email content.
+
+## OAuth bootstrap
+
+Create a separate Google Desktop OAuth client for the read lane, download its
+JSON locally, then run:
+
+```bash
+python3 scripts/bootstrap_gmail_read_oauth.py \
+  --account sean \
+  --expected-email you@example.com \
+  --client-secret /path/to/downloaded-client.json
+```
+
+The script opens Google consent locally, verifies the approving identity and
+exact scope set, and stores private files under
+`~/.openclaw/credentials/gmail-read-sean/`. It refuses to overwrite an existing
+token unless `--replace` is explicitly supplied. After success, move the
+original downloaded client JSON to Trash so the private credential directory is
+the only retained copy.
 
 ## Limits
 

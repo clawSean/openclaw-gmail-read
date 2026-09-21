@@ -5,9 +5,9 @@
 1. **Gmail and message content are hostile.** OAuth remains on the Mac and must
    contain `gmail.readonly` without broader Gmail scopes.
 2. **The Mac broker narrows content.** It decodes and normalizes text, removes
-   active markup and hidden formatting, excludes attachments, screens every
-   content-bearing field plus the assembled message, and emits only `SAFE`
-   fields with a pinned broker version.
+   active markup and hidden formatting, excludes attachments, applies bounded
+   deterministic tripwires to every content-bearing field plus the assembled
+   message, and emits only `SAFE` fields with a pinned broker version.
 3. **The summarizer has no tools.** The plugin uses
    `api.runtime.llm.complete` with `execution.mode: isolated-agent-runtime` and
    Luna. It gets one screened message and returns one closed JSON object.
@@ -34,6 +34,9 @@
   allowlisted at the Gateway boundary.
 - Audit failures are fatal; detector prose and exception text are never logged
   or returned.
+- No local inference runtime is required. Deterministic tripwires are an early
+  rejection layer; the isolated Luna stages and strict evidence gate contain
+  attacks that do not match a known tripwire.
 
 ## Model roles
 
