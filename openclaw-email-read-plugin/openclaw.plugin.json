@@ -1,7 +1,7 @@
 {
   "id": "screened-gmail-read",
   "name": "Screened Gmail Read",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Summarize Gmail through a Mac-local pre-screen, zero-tool summarizer, and independent post-summary gate.",
   "contracts": {
     "tools": ["gmail_read_screened"]
@@ -17,7 +17,7 @@
       "defaultNodeId": {
         "type": "string",
         "default": "",
-        "description": "Required paired macOS node id for the broker runtime."
+        "description": "Optional paired macOS node id; blank runs the broker on the local Mac Gateway."
       },
       "defaultAccount": {
         "type": "string",
@@ -41,13 +41,13 @@
       },
       "summarizerModel": {
         "type": "string",
-        "default": "claude/claude-haiku-4-5",
+        "default": "openai/gpt-5.6-luna",
         "description": "Zero-tool isolated summarizer model."
       },
       "postDetectorModel": {
         "type": "string",
         "default": "openai/gpt-5.6-luna",
-        "description": "Distinct zero-tool source-vs-summary detector model."
+        "description": "Fresh zero-tool source-vs-summary detector model."
       },
       "summaryTimeoutMs": {
         "type": "number",

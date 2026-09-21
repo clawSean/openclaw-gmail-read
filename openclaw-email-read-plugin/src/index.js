@@ -14,7 +14,7 @@ const DEFAULT_MAX_LIST = 5;
 const DEFAULT_DAYS_BACK = 7;
 const MAX_LIST_LIMIT = 5;
 const MAX_DAYS_LIMIT = 7;
-const DEFAULT_SUMMARIZER_MODEL = "claude/claude-haiku-4-5";
+const DEFAULT_SUMMARIZER_MODEL = "openai/gpt-5.6-luna";
 const DEFAULT_POST_DETECTOR_MODEL = "openai/gpt-5.6-luna";
 const SAFE_ACCOUNT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const SAFE_MESSAGE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
@@ -90,11 +90,7 @@ async function verifyBrokerArtifact(scriptPath) {
   const digest = createHash("sha256").update(bytes).digest("hex");
   if (digest !== EXPECTED_BROKER_SHA256) throw new Error("BROKER_ARTIFACT_MISMATCH");
 }
-async function runLocalBroker(paramsJSON) {
-  let raw;
-  try { raw = JSON.parse(paramsJSON || "{}"); }
-  catch { return JSON.stringify({ status: "error", error: "INVALID_REQUEST" }); }
-  const request = normalizeRequest(raw);
+async function executeLocalBroker(request) {
   const argv = buildBrokerArgs(request);
   if (request.dryRun) return JSON.stringify({ status: "ok", dryRun: true, command: NODE_COMMAND, action: request.action, account: request.account, argv });
   try {
@@ -112,11 +108,21 @@ async function runLocalBroker(paramsJSON) {
     return output || JSON.stringify({ status: "error", error: "BROKER_EMPTY_OUTPUT" });
   } catch { return JSON.stringify({ status: "error", error: "BROKER_EXECUTION_FAILED" }); }
 }
+async function runLocalBroker(paramsJSON) {
+  let raw;
+  try { raw = JSON.parse(paramsJSON || "{}"); }
+  catch { return JSON.stringify({ status: "error", error: "INVALID_REQUEST" }); }
+  return executeLocalBroker(normalizeRequest(raw));
+}
 async function invokeBroker(api, params) {
   const request = normalizeRequest(params || {}, getPluginConfig(api));
-  if (!request.nodeId) throw new Error("NO_MACOS_NODE_CONFIGURED");
-  const invoke = await api.runtime.nodes.invoke({ nodeId: request.nodeId, command: NODE_COMMAND, params: request, timeoutMs: request.timeoutMs });
-  const payload = typeof invoke?.payloadJSON === "string" ? JSON.parse(invoke.payloadJSON) : invoke?.payload || invoke;
+  let payload;
+  if (request.nodeId) {
+    const invoke = await api.runtime.nodes.invoke({ nodeId: request.nodeId, command: NODE_COMMAND, params: request, timeoutMs: request.timeoutMs });
+    payload = typeof invoke?.payloadJSON === "string" ? JSON.parse(invoke.payloadJSON) : invoke?.payload || invoke;
+  } else {
+    payload = JSON.parse(await executeLocalBroker(request));
+  }
   return { request, payload };
 }
 
@@ -226,7 +232,6 @@ async function isolatedComplete(api, { model, timeoutMs, systemPrompt, payload, 
 async function summarizeAndGate(api, sourceText, pluginConfig) {
   const summarizerModel = text(pluginConfig.summarizerModel) || DEFAULT_SUMMARIZER_MODEL;
   const postDetectorModel = text(pluginConfig.postDetectorModel) || DEFAULT_POST_DETECTOR_MODEL;
-  if (summarizerModel === postDetectorModel) throw new Error("DETECTOR_MODEL_MUST_DIFFER");
   const timeoutMs = positiveInt(pluginConfig.summaryTimeoutMs, DEFAULT_SUMMARY_TIMEOUT_MS, 60000);
   const summaryResult = await isolatedComplete(api, {
     model: summarizerModel,
@@ -303,7 +308,7 @@ async function executeScreenedRead(api, params) {
   } catch (err) {
     const rawCode = text(err?.message);
     const blocked = rawCode === "POST_DETECTOR_BLOCKED" || rawCode.startsWith("BROKER_BLOCKED_");
-    const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|NO_MACOS_NODE_CONFIGURED|ISOLATED_COMPLETION_UNAVAILABLE|DETECTOR_MODEL_MUST_DIFFER|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+)$/.test(rawCode)
+    const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+)$/.test(rawCode)
       ? rawCode
       : "UPSTREAM_FAILURE";
     return resultText(blocked ? "Screened Gmail read blocked by a safety gate." : "Screened Gmail read failed closed.", {
@@ -314,7 +319,7 @@ async function executeScreenedRead(api, params) {
   }
 }
 
-export { normalizeRequest, buildBrokerArgs, verifyBrokerArtifact, validateSummary, validatePostVerdict, summarizeAndGate, processBrokerPayload };
+export { normalizeRequest, buildBrokerArgs, verifyBrokerArtifact, invokeBroker, validateSummary, validatePostVerdict, summarizeAndGate, processBrokerPayload };
 
 export default function register(api) {
   api.registerNodeHostCommand?.({ command: NODE_COMMAND, cap: "gmail-read", dangerous: true, handle: runLocalBroker });

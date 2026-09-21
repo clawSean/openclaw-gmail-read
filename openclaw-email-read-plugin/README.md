@@ -11,15 +11,15 @@ It registers:
 
 The broker path, Python executable, node target, and timeout are operator config;
 caller input cannot override them. Successful broker output is transformed by a
-native zero-tool Haiku completion, strict deterministic validation, and a
-separate zero-tool Luna relay detector. Raw source and blocked candidates are not
+native zero-tool Luna completion, strict deterministic validation, and a
+fresh zero-tool Luna relay detector. Raw source and blocked candidates are not
 returned in tool details.
 
 Defaults:
 
 - account: `sean`
 - maximum scope: 5 messages / 7 days
-- summarizer: `claude/claude-haiku-4-5`
+- summarizer: `openai/gpt-5.6-luna`
 - post-detector: `openai/gpt-5.6-luna`
 - broker: `/Users/Sean/projects/openclaw-gmail-read/mac_email_read_broker.py`
 

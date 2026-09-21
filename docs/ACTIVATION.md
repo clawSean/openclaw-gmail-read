@@ -10,15 +10,14 @@ live until every item below has a durable receipt.
    its pinned SHA-256.
 4. Confirm Ollama is local and the configured pre-detector model is installed.
 5. Run both offline suites and record the commit plus test output.
-6. Verify the plugin model policy explicitly allows only:
-   - `claude/claude-haiku-4-5`
-   - `openai/gpt-5.6-luna`
+6. Verify the plugin model policy explicitly allows only
+   `openai/gpt-5.6-luna`.
 7. Configure native completion trust under
    `plugins.entries.screened-gmail-read.llm` with
    `allowModelOverride: true`, and restrict both `allowedModels` and
-   `allowedCompletionModels` to those two models.
-8. Prove node identity, the dangerous-command allowlist, append-only audit, and
-   a maximum scope of 5 messages / 7 days.
+   `allowedCompletionModels` to that model.
+8. Prove local Gateway execution (or an explicitly configured node identity),
+   append-only audit, and a maximum scope of 5 messages / 7 days.
 9. Obtain explicit operator approval before the live config write or Gateway
    restart.
 10. Run one synthetic benign canary, one relay canary, one malformed-output

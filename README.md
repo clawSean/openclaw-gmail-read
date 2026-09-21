@@ -6,8 +6,8 @@ summaries without exposing raw email to a tool-capable parent agent.
 ## Security shape
 
 ```text
-Gmail readonly → Mac broker → sanitize + pre-screen → zero-tool Haiku summary
-               → deterministic schema/evidence gate → separate Luna relay gate
+Gmail readonly → Mac broker → sanitize + pre-screen → zero-tool Luna summary
+               → deterministic schema/evidence gate → fresh Luna relay gate
                → explicitly untrusted envelope
 ```
 
@@ -15,9 +15,7 @@ The output cannot authorize sends, commands, purchases, credential changes, URL
 fetches, or any other action. The plugin emits no raw URL, accepts only evidence
 quoted from the screened source, and fails closed on detector/model/schema errors.
 
-This is **not live infrastructure**. The repository contains an offline-proven
-reference implementation. Gmail access and plugin activation remain disabled
-until the separate activation checklist is approved and completed.
+This remains disabled until the separate activation checklist is completed.
 
 ## Components
 

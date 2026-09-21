@@ -10,11 +10,12 @@
    fields with a pinned broker version.
 3. **The summarizer has no tools.** The plugin uses
    `api.runtime.llm.complete` with `execution.mode: isolated-agent-runtime` and
-   Haiku. It gets one screened message and returns one closed JSON object.
+   Luna. It gets one screened message and returns one closed JSON object.
 4. **Deterministic validation is authoritative.** Unknown keys, unsupported
    enums, oversized fields, raw URLs, role/control language, malformed JSON,
    non-verbatim evidence, and improperly framed requests are rejected.
-5. **A distinct post-gate checks relay/fidelity.** Luna compares the screened
+5. **A fresh post-gate checks relay/fidelity.** A separate Luna completion with
+   a different system prompt and no shared context compares the screened
    source with the validated candidate. `REVIEW`, `BLOCK`, malformed output,
    timeout, or outage all withhold the result.
 6. **The parent receives an untrusted envelope.** Every result is labeled
@@ -23,8 +24,10 @@
 
 ## Execution controls
 
-- Broker path, Python executable, node target, and timeout come only from
+- Broker path, Python executable, optional node target, and timeout come only from
   operator configuration, never tool or email input.
+- With the Gateway on the Mac, the plugin executes the pinned broker locally.
+  A configured node id remains an explicit remote-Mac option.
 - The broker artifact SHA-256 is pinned before execution.
 - The child process receives a scrubbed environment.
 - Broker status, identity, version, required verdicts, and result count are
@@ -34,10 +37,10 @@
 
 ## Model roles
 
-- `claude/claude-haiku-4-5`: cheap bounded JSON transformation.
-- `openai/gpt-5.6-luna`: independent source-vs-summary relay detector.
-- The models must remain distinct. Neither model has tools, workspace access,
-  memory, or an agent execution loop.
+- `openai/gpt-5.6-luna`: bounded JSON transformation, followed by a fresh
+  source-vs-summary relay-detector call.
+- The calls have separate prompts and no shared context. Neither call has tools,
+  workspace access, memory, or an agent execution loop.
 
-Model classification is defense-in-depth. Capability isolation and strict
-validation are the actual trust controls.
+The second call is defense-in-depth, not model-family independence. Capability
+isolation and strict deterministic validation are the actual trust controls.
