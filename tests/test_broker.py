@@ -125,6 +125,47 @@ class BrokerSecurityTests(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 broker.validate_token_scopes("not-a-real-token")
 
+        response.__enter__.return_value.read.return_value = json.dumps({
+            "scope": "https://www.googleapis.com/auth/gmail.readonly",
+        }).encode()
+        with mock.patch.object(broker.urllib.request, "urlopen", return_value=response):
+            with self.assertRaises(PermissionError):
+                broker.validate_token_scopes("not-a-real-token")
+
+    def test_broker_accepts_exact_bootstrap_scope_shape(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps({
+            "scope": " ".join(broker.SCOPES),
+        }).encode()
+        with mock.patch.object(broker.urllib.request, "urlopen", return_value=response):
+            broker.validate_token_scopes("not-a-real-token")
+
+    def test_credentials_are_pinned_to_dedicated_read_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = pathlib.Path(temp)
+            account = {"label": "sean", "credential_dir": str(base / "gmail-send-sean")}
+            with mock.patch.object(broker, "MAC_CREDENTIAL_BASE", base):
+                with self.assertRaises(PermissionError):
+                    broker._get_access_token(account)
+
+    def test_refreshed_token_write_is_atomic_and_private(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = pathlib.Path(temp) / "gmail-read-sean" / "token.json"
+            broker._atomic_private_json(path, {"refresh_token": "synthetic"})
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(json.loads(path.read_text())["refresh_token"], "synthetic")
+
+    def test_account_registry_must_be_private_regular_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = pathlib.Path(temp) / "accounts.json"
+            path.write_text(json.dumps({"accounts": []}))
+            path.chmod(0o644)
+            with self.assertRaises(PermissionError):
+                broker._load_accounts_config(path)
+            path.chmod(0o600)
+            self.assertEqual(broker._load_accounts_config(path), [])
+
     def test_no_bypass_flags_exist(self):
         with redirect_stderr(StringIO()):
             with self.assertRaises(SystemExit):

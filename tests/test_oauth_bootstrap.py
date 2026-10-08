@@ -23,6 +23,8 @@ class OAuthBootstrapTests(unittest.TestCase):
             oauth._validate_scopes(' '.join((*oauth.SCOPES, 'https://www.googleapis.com/auth/gmail.send')))
         with self.assertRaises(ValueError):
             oauth._validate_scopes('openid https://www.googleapis.com/auth/userinfo.email')
+        with self.assertRaises(ValueError):
+            oauth._validate_scopes('https://www.googleapis.com/auth/gmail.readonly')
 
     def test_client_must_be_desktop_oauth(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -50,6 +52,23 @@ class OAuthBootstrapTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 oauth._assert_distinct_from_send_clients('shared-client', base)
             oauth._assert_distinct_from_send_clients('read-only-client', base)
+
+    def test_oauth_registry_is_written_disabled_and_preserves_other_accounts(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = pathlib.Path(temp)
+            registry = base / 'gmail-read-accounts.json'
+            oauth._atomic_private_json(registry, {'accounts': [
+                {'label': 'other', 'credential_dir': '/private/other', 'can_read': True},
+                {'label': 'sean', 'credential_dir': '/stale', 'can_read': True},
+            ]})
+            read_dir = base / 'gmail-read-sean'
+            result = oauth._upsert_disabled_account_registry(base, 'sean', read_dir)
+            data = json.loads(result.read_text())
+            self.assertEqual(result.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(len(data['accounts']), 2)
+            sean = next(row for row in data['accounts'] if row['label'] == 'sean')
+            self.assertEqual(sean['credential_dir'], str(read_dir))
+            self.assertIs(sean['can_read'], False)
 
     def test_cli_requires_expected_email_and_client_path(self):
         with redirect_stderr(StringIO()):

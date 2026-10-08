@@ -21,6 +21,10 @@
 6. **The parent receives an untrusted envelope.** Every result is labeled
    `untrustedEmailDerived: true` and `canAuthorizeActions: false`. Blocked paths
    contain no source or candidate content.
+7. **The account is operator-bound.** Tool callers cannot select another Gmail
+   account. The configured account, broker response account, operation, message
+   identifiers, credential directory, and Desktop OAuth client shape are all
+   checked before any isolated model call.
 
 ## Execution controls
 
@@ -32,6 +36,9 @@
 - The child process receives a scrubbed environment.
 - Broker status, identity, version, required verdicts, and result count are
   allowlisted at the Gateway boundary.
+- The read credential must live under the exact `gmail-read-<account>` directory;
+  account registry, client, and token files must be regular private files.
+- OAuth refreshes use atomic private-file replacement.
 - Audit failures are fatal; detector prose and exception text are never logged
   or returned.
 - No local inference runtime is required. Deterministic tripwires are an early

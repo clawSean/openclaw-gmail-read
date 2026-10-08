@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const NODE_COMMAND = "screened-gmail-read.broker";
 const DEFAULT_SCRIPT_PATH = "/Users/Sean/projects/openclaw-gmail-read/mac_email_read_broker.py";
-const EXPECTED_BROKER_SHA256 = "4251c064639993566427df4f859a3752935274e4dc3b914b02049deccf126af5";
+const EXPECTED_BROKER_SHA256 = "08a62f822b86dd624a2226ddd64e3bad2ddd95e6d16d5ad6f692fee4614f93ff";
 const DEFAULT_PYTHON = "python3";
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_SUMMARY_TIMEOUT_MS = 30000;
@@ -65,7 +65,10 @@ function resultText(message, details = {}) { return { content: [{ type: "text", 
 
 function normalizeRequest(input = {}, pluginConfig = {}) {
   const action = normalizeAction(input.action);
-  const account = text(input.account) || text(pluginConfig.defaultAccount) || "sean";
+  const configuredAccount = text(pluginConfig.defaultAccount) || "sean";
+  const requestedAccount = text(input.account);
+  if (requestedAccount && requestedAccount !== configuredAccount) throw new Error("ACCOUNT_OVERRIDE_FORBIDDEN");
+  const account = configuredAccount;
   const messageId = text(input.messageId);
   const nodeId = text(pluginConfig.defaultNodeId);
   const python = text(pluginConfig.macBrokerPython) || DEFAULT_PYTHON;
@@ -210,6 +213,8 @@ function assertBrokerEntrySafe(entry, action) {
     ? ["from_verdict", "to_verdict", "subject_verdict", "date_verdict", "body_verdict", "aggregate_verdict"]
     : ["from_verdict", "subject_verdict", "date_verdict", "snippet_verdict", "aggregate_verdict"];
   for (const key of required) if (entry[key] !== "SAFE") throw new Error(`BROKER_BLOCKED_${key.toUpperCase()}`);
+  if (!SAFE_MESSAGE_ID_RE.test(text(entry.id))) throw new Error("BROKER_MESSAGE_ID_INVALID");
+  if (entry.threadId && !SAFE_MESSAGE_ID_RE.test(text(entry.threadId))) throw new Error("BROKER_THREAD_ID_INVALID");
 }
 function sourceForEntry(entry, action) {
   const source = action === "read_body"
@@ -232,6 +237,9 @@ async function isolatedComplete(api, { model, timeoutMs, systemPrompt, payload, 
 async function summarizeAndGate(api, sourceText, pluginConfig) {
   const summarizerModel = text(pluginConfig.summarizerModel) || DEFAULT_SUMMARIZER_MODEL;
   const postDetectorModel = text(pluginConfig.postDetectorModel) || DEFAULT_POST_DETECTOR_MODEL;
+  if (summarizerModel !== DEFAULT_SUMMARIZER_MODEL || postDetectorModel !== DEFAULT_POST_DETECTOR_MODEL) {
+    throw new Error("MODEL_POLICY_MISMATCH");
+  }
   const timeoutMs = positiveInt(pluginConfig.summaryTimeoutMs, DEFAULT_SUMMARY_TIMEOUT_MS, 60000);
   const summaryResult = await isolatedComplete(api, {
     model: summarizerModel,
@@ -277,9 +285,11 @@ async function summarizeAndGate(api, sourceText, pluginConfig) {
 }
 async function processBrokerPayload(api, request, payload) {
   if (!payload || payload.status !== "ok") throw new Error("BROKER_FAILED");
-  if (payload.broker !== "mac_email_read_broker" || payload.broker_version !== "1.2.0") throw new Error("BROKER_ATTESTATION_MISMATCH");
+  if (payload.broker !== "mac_email_read_broker" || payload.broker_version !== "1.3.0") throw new Error("BROKER_ATTESTATION_MISMATCH");
+  if (payload.account !== request.account || payload.operation !== request.action) throw new Error("BROKER_SCOPE_MISMATCH");
   const entries = Array.isArray(payload.data) ? payload.data : [payload.data];
   if (entries.length > MAX_LIST_LIMIT) throw new Error("BROKER_RESULT_LIMIT");
+  if (request.action === "read_body" && entries.length !== 1) throw new Error("BROKER_RESULT_LIMIT");
   const pluginConfig = getPluginConfig(api);
   const results = [];
   for (const entry of entries) {
@@ -308,7 +318,7 @@ async function executeScreenedRead(api, params) {
   } catch (err) {
     const rawCode = text(err?.message);
     const blocked = rawCode === "POST_DETECTOR_BLOCKED" || rawCode.startsWith("BROKER_BLOCKED_");
-    const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+)$/.test(rawCode)
+    const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_SCOPE_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|BROKER_(?:MESSAGE|THREAD)_ID_INVALID|ACCOUNT_OVERRIDE_FORBIDDEN|MODEL_POLICY_MISMATCH|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+)$/.test(rawCode)
       ? rawCode
       : "UPSTREAM_FAILURE";
     return resultText(blocked ? "Screened Gmail read blocked by a safety gate." : "Screened Gmail read failed closed.", {
@@ -341,7 +351,7 @@ export default function register(api) {
       additionalProperties: false,
       properties: {
         action: { type: "string", enum: ["list", "read_body"], default: "list" },
-        account: { type: "string" }, messageId: { type: "string" },
+        messageId: { type: "string" },
         max: { type: "number", minimum: 1, maximum: MAX_LIST_LIMIT },
         days: { type: "number", minimum: 1, maximum: MAX_DAYS_LIMIT },
       },

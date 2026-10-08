@@ -68,10 +68,8 @@ def _atomic_private_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
 def _validate_scopes(scope_value: Any) -> set[str]:
     scopes = set(scope_value.split()) if isinstance(scope_value, str) else set(scope_value or [])
     expected = set(SCOPES)
-    if 'https://www.googleapis.com/auth/gmail.readonly' not in scopes:
-        raise ValueError('required gmail.readonly scope missing')
-    if not scopes.issubset(expected):
-        raise ValueError('OAuth grant contains an unexpected scope')
+    if scopes != expected:
+        raise ValueError('OAuth grant does not exactly match the read lane')
     return scopes
 
 
@@ -84,6 +82,30 @@ def _assert_distinct_from_send_clients(client_id: str, credential_base: pathlib.
             continue
         if cfg.get('client_id') == client_id:
             raise ValueError('read OAuth client must be separate from every Gmail-send client')
+
+
+def _upsert_disabled_account_registry(
+    credential_base: pathlib.Path,
+    label: str,
+    credential_dir: pathlib.Path,
+) -> pathlib.Path:
+    """Register the read lane disabled; activation remains a separate approval."""
+    registry = credential_base / 'gmail-read-accounts.json'
+    if registry.is_symlink():
+        raise ValueError('Gmail-read account registry must not be a symlink')
+    data: dict[str, Any] = {'accounts': []}
+    if registry.exists():
+        data = json.loads(registry.read_text())
+        if not isinstance(data, dict) or not isinstance(data.get('accounts'), list):
+            raise ValueError('Gmail-read account registry is malformed')
+    rows = [row for row in data['accounts'] if isinstance(row, dict) and row.get('label') != label]
+    rows.append({
+        'label': label,
+        'credential_dir': str(credential_dir),
+        'can_read': False,
+    })
+    _atomic_private_json(registry, {'accounts': rows})
+    return registry
 
 
 class _CallbackHandler(http.server.BaseHTTPRequestHandler):
@@ -217,8 +239,13 @@ def main(argv: list[str] | None = None) -> int:
     client_payload = json.loads(source_client.read_text())
     _atomic_private_json(client_path, client_payload)
     _atomic_private_json(token_path, saved_token)
+    registry_path = _upsert_disabled_account_registry(
+        args.credential_base.expanduser().resolve(), label, credential_dir,
+    )
     print(f'Gmail-readonly OAuth saved for {label!r}; account and scopes verified.')
     print(f'Credential directory: {credential_dir}')
+    print(f'Disabled account registry updated: {registry_path}')
+    print('Email reading remains disabled until the separate activation gate passes.')
     return 0
 
 

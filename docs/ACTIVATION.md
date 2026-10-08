@@ -10,26 +10,30 @@ live until every item below has a durable receipt.
    its pinned SHA-256.
 4. Create the token with `scripts/bootstrap_gmail_read_oauth.py`; verify the
    approving identity, exact scope set, private file modes, and separate
-   `gmail-read-sean` credential directory. Move the downloaded source JSON to
+   `gmail-read-sean` credential directory. The bootstrap must create/update the
+   account registry with `can_read: false`. Move the downloaded source JSON to
    Trash after the verified private copy exists.
 5. Confirm the read plugin cannot access any `gmail.send` credential directory.
 6. Run both offline suites and record the commit plus test output.
-7. Verify the plugin model policy explicitly allows only
+7. Run `python3 scripts/activation_preflight.py --phase prepare`; require a
+   secret-free `status: ready` receipt before any activation mutation.
+8. Verify the plugin model policy explicitly allows only
    `openai/gpt-5.6-luna`.
-8. Configure native completion trust under
+9. Configure native completion trust under
    `plugins.entries.screened-gmail-read.llm` with
    `allowModelOverride: true`, and restrict both `allowedModels` and
    `allowedCompletionModels` to that model.
-9. Prove local Gateway execution (or an explicitly configured node identity),
+10. Prove local Gateway execution (or an explicitly configured node identity),
    append-only audit, and a maximum scope of 5 messages / 7 days.
-10. Obtain explicit operator approval before the live config write or Gateway
+11. Obtain explicit operator approval before the live config write or Gateway
    restart.
-11. Run one synthetic benign canary, one relay canary, one malformed-output
+12. Run one synthetic benign canary, one relay canary, one malformed-output
     canary, and one model-outage canary. The last three must fail closed.
-12. Run one bounded real read on the Sean account. Confirm no raw body, URL,
+13. Run `python3 scripts/activation_preflight.py --phase live`, then one bounded
+    real read on the Sean account. Confirm no raw body, URL,
     source payload, OAuth material, or detector prose appears in tool details,
     logs, or chat history.
-13. Only then describe the capability as live. Extending to another account is
+14. Only then describe the capability as live. Extending to another account is
     a separate scope and OAuth review.
 
 Rollback: disable the plugin entry. Preserve audit records and test receipts;

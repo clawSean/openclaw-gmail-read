@@ -23,6 +23,8 @@ This remains disabled until the separate activation checklist is completed.
   scope enforcement, and append-only audit.
 - `scripts/bootstrap_gmail_read_oauth.py` — local PKCE OAuth bootstrap that
   requests only Gmail read-only plus identity scopes and never prints tokens.
+- `scripts/activation_preflight.py` — offline, secret-safe verification of the
+  broker pin, account boundary, OAuth files/scopes, and host model policy.
 - `openclaw-email-read-plugin/` — native node invocation plus isolated OpenClaw
   model completions and the post-summary gate.
 - `tests/` — offline Python security tests.
@@ -65,3 +67,4 @@ the only retained copy.
   until the live rollout gate passes.
 
 See [Architecture](docs/ARCHITECTURE.md) and [Activation](docs/ACTIVATION.md).
+The exact Google-side setup is in [Google Cloud OAuth Handoff](docs/GCP-OAUTH-HANDOFF.md).

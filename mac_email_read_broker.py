@@ -28,6 +28,7 @@ import json
 import os
 import pathlib
 import re
+import secrets
 import sys
 import time
 import unicodedata
@@ -65,6 +66,7 @@ MAC_BROKER_AUDIT_LOG = pathlib.Path(
 # Scopes: read-only
 SCOPES = (
     'https://www.googleapis.com/auth/gmail.readonly',
+    'openid',
     'https://www.googleapis.com/auth/userinfo.email',
 )
 
@@ -195,10 +197,37 @@ def _load_json(path: pathlib.Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def _require_private_file(path: pathlib.Path, label: str) -> None:
+    if not path.is_file() or path.is_symlink():
+        raise PermissionError(f'{label} is missing or symlinked')
+    if path.stat().st_mode & 0o777 != 0o600:
+        raise PermissionError(f'{label} must use mode 0600')
+
+
+def _atomic_private_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
+    """Write private JSON atomically without following an existing symlink."""
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    path.parent.chmod(0o700)
+    temp = path.with_name(f'.{path.name}.{secrets.token_hex(8)}.tmp')
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, 'w') as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True)
+            handle.write('\n')
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, path)
+        path.chmod(0o600)
+    finally:
+        if temp.exists():
+            temp.unlink()
+
+
 def _load_accounts_config(config_path: pathlib.Path | None = None) -> list[dict[str, Any]]:
     """Load accounts from Mac-local config."""
     if config_path is None:
         config_path = MAC_CREDENTIAL_BASE / 'gmail-read-accounts.json'
+    _require_private_file(config_path, 'Gmail-read account registry')
     data = _load_json(config_path)
     return data.get('accounts', [])
 
@@ -212,7 +241,11 @@ def _get_account(accounts: list[dict[str, Any]], label: str) -> dict[str, Any]:
 
 def _get_access_token(account: dict[str, Any]) -> str:
     """Load and optionally refresh the access token. Mac-local only."""
-    cred_dir = pathlib.Path(account['credential_dir'])
+    label = str(account.get('label') or '')
+    expected_dir = (MAC_CREDENTIAL_BASE / f'gmail-read-{label}').resolve()
+    cred_dir = pathlib.Path(account['credential_dir']).expanduser().resolve()
+    if cred_dir != expected_dir:
+        raise PermissionError('credential directory is outside the dedicated Gmail-read lane')
     token_path = cred_dir / 'token.json'
     client_secret_path = cred_dir / 'client_secret.json'
 
@@ -222,6 +255,7 @@ def _get_access_token(account: dict[str, Any]) -> str:
             f'Run OAuth flow for account {account["label"]!r} on this Mac.'
         )
 
+    _require_private_file(token_path, 'Gmail-read token')
     token = _load_json(token_path)
     access_token = token.get('access_token', '')
     expires_at = token.get('expires_at')
@@ -245,8 +279,11 @@ def _get_access_token(account: dict[str, Any]) -> str:
             raise SystemExit(
                 f'BROKER-ERROR: need client_secret.json at {client_secret_path} to refresh token'
             )
+        _require_private_file(client_secret_path, 'Gmail-read Desktop OAuth client')
         cs = _load_json(client_secret_path)
-        cfg = cs.get('installed') or cs.get('web') or {}
+        cfg = cs.get('installed') or {}
+        if not cfg.get('client_id') or not cfg.get('client_secret'):
+            raise PermissionError('Gmail-read client must be a Google Desktop OAuth client')
         body = urllib.parse.urlencode({
             'client_id': cfg['client_id'],
             'client_secret': cfg['client_secret'],
@@ -263,8 +300,7 @@ def _get_access_token(account: dict[str, Any]) -> str:
         merged = {**token, **refreshed, 'refresh_token': refresh_token}
         if 'expires_in' in refreshed:
             merged['expires_at'] = int(time.time()) + int(refreshed['expires_in'])
-        token_path.write_text(json.dumps(merged, indent=2, sort_keys=True))
-        token_path.chmod(0o600)
+        _atomic_private_json(token_path, merged)
         return merged['access_token']
 
     return access_token
@@ -277,10 +313,8 @@ def validate_token_scopes(access_token: str) -> None:
         token_info = json.loads(resp.read().decode())
     scope_value = token_info.get('scope', '')
     scopes = set(scope_value.split()) if isinstance(scope_value, str) else set(scope_value or [])
-    if 'https://www.googleapis.com/auth/gmail.readonly' not in scopes:
-        raise PermissionError('required gmail.readonly scope missing')
-    if not scopes.issubset(set(SCOPES)):
-        raise PermissionError('unexpected OAuth scope present')
+    if scopes != set(SCOPES):
+        raise PermissionError('OAuth scope set does not exactly match the read lane')
     if any(fragment in scope for scope in scopes for fragment in FORBIDDEN_SCOPE_FRAGMENTS):
         raise PermissionError('forbidden Gmail scope present')
 
@@ -565,7 +599,7 @@ def _success_envelope(account: str, operation: str, data: Any) -> dict[str, Any]
     return {
         'status': 'ok',
         'broker': 'mac_email_read_broker',
-        'broker_version': '1.2.0',
+        'broker_version': '1.3.0',
         'account': account,
         'operation': operation,
         'ts': datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -577,7 +611,7 @@ def _error_envelope(account: str, error: str) -> dict[str, Any]:
     return {
         'status': 'error',
         'broker': 'mac_email_read_broker',
-        'broker_version': '1.2.0',
+        'broker_version': '1.3.0',
         'account': account,
         'ts': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'error': error,
