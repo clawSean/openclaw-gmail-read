@@ -18,15 +18,15 @@ SPEC.loader.exec_module(preflight)
 class ActivationPreflightTests(unittest.TestCase):
     def _fixture(self, temp: pathlib.Path, *, ready: bool = True) -> argparse.Namespace:
         project = temp / 'project'
-        plugin = project / 'openclaw-email-read-plugin' / 'src'
+        plugin = project / 'mailreef-plugin' / 'src'
         plugin.mkdir(parents=True)
-        broker = project / 'mac_email_read_broker.py'
+        broker = project / 'mailreef_broker.py'
         broker.write_text('synthetic broker\n')
         digest = hashlib.sha256(broker.read_bytes()).hexdigest()
         (plugin / 'index.js').write_text(f'const EXPECTED_BROKER_SHA256 = "{digest}";\n')
 
         credentials = temp / 'credentials'
-        read_dir = credentials / 'gmail-read-sean'
+        read_dir = credentials / 'mailreef-sean'
         read_dir.mkdir(parents=True, mode=0o700)
         read_dir.chmod(0o700)
         client = {'installed': {'client_id': 'read-client', 'client_secret': 'synthetic'}}
@@ -35,14 +35,14 @@ class ActivationPreflightTests(unittest.TestCase):
             path = read_dir / name
             path.write_text(json.dumps(payload))
             path.chmod(0o600)
-        registry = credentials / 'gmail-read-accounts.json'
+        registry = credentials / 'mailreef-accounts.json'
         registry.write_text(json.dumps({'accounts': [{
             'label': 'sean', 'credential_dir': str(read_dir), 'can_read': False,
         }]}))
         registry.chmod(0o600)
 
         oc = temp / 'openclaw.json'
-        oc.write_text(json.dumps({'plugins': {'entries': {'screened-gmail-read': {
+        oc.write_text(json.dumps({'plugins': {'entries': {'mailreef': {
             'enabled': False,
             'llm': {
                 'allowModelOverride': True,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline, secret-safe activation preflight for screened Gmail read."""
+"""Offline, secret-safe activation preflight for Mailreef."""
 from __future__ import annotations
 
 import argparse
@@ -55,10 +55,10 @@ def run_checks(args: argparse.Namespace) -> dict[str, Any]:
     root = args.project_root.expanduser().resolve()
     credential_base = args.credential_base.expanduser().resolve()
     account = args.account
-    credential_dir = credential_base / f'gmail-read-{account}'
-    broker = root / 'mac_email_read_broker.py'
-    plugin_source = root / 'openclaw-email-read-plugin' / 'src' / 'index.js'
-    accounts_path = credential_base / 'gmail-read-accounts.json'
+    credential_dir = credential_base / f'mailreef-{account}'
+    broker = root / 'mailreef_broker.py'
+    plugin_source = root / 'mailreef-plugin' / 'src' / 'index.js'
+    accounts_path = credential_base / 'mailreef-accounts.json'
     checks: list[Check] = []
 
     checks.append(Check('canonical project files', broker.is_file() and plugin_source.is_file(), 'broker and plugin source found'))
@@ -72,7 +72,7 @@ def run_checks(args: argparse.Namespace) -> dict[str, Any]:
     if config_ok:
         try:
             oc = _json(args.openclaw_config)
-            entry = oc.get('plugins', {}).get('entries', {}).get('screened-gmail-read', {})
+            entry = oc.get('plugins', {}).get('entries', {}).get('mailreef', {})
             cfg = entry.get('config', {})
             llm = entry.get('llm', {})
             expected_enabled = args.phase == 'live'

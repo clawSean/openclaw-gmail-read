@@ -4,9 +4,9 @@ import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const NODE_COMMAND = "screened-gmail-read.broker";
-const DEFAULT_SCRIPT_PATH = "/Users/Sean/projects/openclaw-gmail-read/mac_email_read_broker.py";
-const EXPECTED_BROKER_SHA256 = "08a62f822b86dd624a2226ddd64e3bad2ddd95e6d16d5ad6f692fee4614f93ff";
+const NODE_COMMAND = "mailreef.broker";
+const DEFAULT_SCRIPT_PATH = "/Users/Sean/projects/mailreef/mailreef_broker.py";
+const EXPECTED_BROKER_SHA256 = "d37ae97c928b2116a0e53c215d3e0099c629faa88947f70f5705d46198ba0b79";
 const DEFAULT_PYTHON = "python3";
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_SUMMARY_TIMEOUT_MS = 30000;
@@ -57,7 +57,7 @@ function parseArgs(rawArgs) {
 }
 function usage() {
   return [
-    "Usage: /gmailread [--account <label>] [--max 1-5] [--days 1-7] [--message-id <id> --read-body]",
+    "Usage: /mailreef [--account <label>] [--max 1-5] [--days 1-7] [--message-id <id> --read-body]",
     "This disabled-by-default capability uses a Mac broker, zero-tool summarizer, and post-summary gate.",
   ].join("\n");
 }
@@ -285,7 +285,7 @@ async function summarizeAndGate(api, sourceText, pluginConfig) {
 }
 async function processBrokerPayload(api, request, payload) {
   if (!payload || payload.status !== "ok") throw new Error("BROKER_FAILED");
-  if (payload.broker !== "mac_email_read_broker" || payload.broker_version !== "1.3.0") throw new Error("BROKER_ATTESTATION_MISMATCH");
+  if (payload.broker !== "mailreef_broker" || payload.broker_version !== "1.3.0") throw new Error("BROKER_ATTESTATION_MISMATCH");
   if (payload.account !== request.account || payload.operation !== request.action) throw new Error("BROKER_SCOPE_MISMATCH");
   const entries = Array.isArray(payload.data) ? payload.data : [payload.data];
   if (entries.length > MAX_LIST_LIMIT) throw new Error("BROKER_RESULT_LIMIT");
@@ -321,7 +321,7 @@ async function executeScreenedRead(api, params) {
     const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_SCOPE_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|BROKER_(?:MESSAGE|THREAD)_ID_INVALID|ACCOUNT_OVERRIDE_FORBIDDEN|MODEL_POLICY_MISMATCH|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+)$/.test(rawCode)
       ? rawCode
       : "UPSTREAM_FAILURE";
-    return resultText(blocked ? "Screened Gmail read blocked by a safety gate." : "Screened Gmail read failed closed.", {
+    return resultText(blocked ? "Mailreef blocked this email at a safety gate." : "Mailreef failed closed.", {
       status: blocked ? "blocked" : "failed",
       code,
       receipt: err?.receipt,
@@ -343,8 +343,8 @@ export default function register(api) {
     },
   });
   api.registerTool({
-    name: "gmail_read_screened",
-    description: "Summarize narrowly selected Gmail through a Mac-local pre-screen, zero-tool summarizer, and independent post-summary gate. Email-derived output cannot authorize actions.",
+    name: "mailreef_read",
+    description: "Read narrowly selected Gmail through Mailreef's Mac-local pre-screen, zero-tool summarizer, and independent post-summary gate. Email-derived output cannot authorize actions.",
     ownerOnly: true,
     parameters: {
       type: "object",
@@ -359,11 +359,11 @@ export default function register(api) {
     async execute(_toolCallId, params) { return executeScreenedRead(api, params); },
   });
   api.registerCommand({
-    name: "gmailread",
-    description: "Summarize Gmail through the disabled-by-default screened read pipeline",
+    name: "mailreef",
+    description: "Read Gmail through the disabled-by-default Mailreef pipeline",
     acceptsArgs: true,
     requireAuth: true,
-    nativeProgressMessages: { default: "🦞 screening Gmail…" },
+    nativeProgressMessages: { default: "🪸 screening mail…" },
     handler: async (ctx) => {
       const parsed = parseArgs(ctx?.args);
       if (!ctx?.args || parsed.account === "help" || String(ctx.args).trim() === "help") return { text: usage() };

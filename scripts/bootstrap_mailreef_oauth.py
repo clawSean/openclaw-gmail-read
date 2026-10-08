@@ -90,14 +90,14 @@ def _upsert_disabled_account_registry(
     credential_dir: pathlib.Path,
 ) -> pathlib.Path:
     """Register the read lane disabled; activation remains a separate approval."""
-    registry = credential_base / 'gmail-read-accounts.json'
+    registry = credential_base / 'mailreef-accounts.json'
     if registry.is_symlink():
-        raise ValueError('Gmail-read account registry must not be a symlink')
+        raise ValueError('Mailreef account registry must not be a symlink')
     data: dict[str, Any] = {'accounts': []}
     if registry.exists():
         data = json.loads(registry.read_text())
         if not isinstance(data, dict) or not isinstance(data.get('accounts'), list):
-            raise ValueError('Gmail-read account registry is malformed')
+            raise ValueError('Mailreef account registry is malformed')
     rows = [row for row in data['accounts'] if isinstance(row, dict) and row.get('label') != label]
     rows.append({
         'label': label,
@@ -161,7 +161,7 @@ def _token_identity_and_scopes(access_token: str) -> tuple[str, set[str]]:
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Authorize a separate Gmail-readonly OAuth credential.')
+    parser = argparse.ArgumentParser(description='Authorize Mailreef with a separate Gmail-readonly OAuth credential.')
     parser.add_argument('--account', default='sean', help='Local account label (default: sean)')
     parser.add_argument('--expected-email', required=True, help='Google account that must approve the grant')
     parser.add_argument('--client-secret', required=True, type=pathlib.Path, help='Downloaded Google Desktop OAuth JSON')
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     if not source_client.is_file():
         raise SystemExit('Downloaded Desktop OAuth client JSON was not found.')
 
-    credential_dir = args.credential_base.expanduser().resolve() / f'gmail-read-{label}'
+    credential_dir = args.credential_base.expanduser().resolve() / f'mailreef-{label}'
     token_path = credential_dir / 'token.json'
     client_path = credential_dir / 'client_secret.json'
     if token_path.exists() and not args.replace:
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
     registry_path = _upsert_disabled_account_registry(
         args.credential_base.expanduser().resolve(), label, credential_dir,
     )
-    print(f'Gmail-readonly OAuth saved for {label!r}; account and scopes verified.')
+    print(f'Mailreef OAuth saved for {label!r}; account and scopes verified.')
     print(f'Credential directory: {credential_dir}')
     print(f'Disabled account registry updated: {registry_path}')
     print('Email reading remains disabled until the separate activation gate passes.')

@@ -50,16 +50,16 @@ DEFAULT_DAYS_BACK = 7
 # Mac-local credential base path
 MAC_CREDENTIAL_BASE = pathlib.Path(
     os.environ.get(
-        'MAC_GMAIL_READ_CREDENTIAL_BASE',
+        'MAILREEF_CREDENTIAL_BASE',
         os.path.expanduser('~/.openclaw/credentials'),
     )
 )
 
 # Broker audit log on Mac
-MAC_BROKER_AUDIT_LOG = pathlib.Path(
+MAILREEF_AUDIT_LOG = pathlib.Path(
     os.environ.get(
-        'MAC_BROKER_AUDIT_LOG',
-        os.path.expanduser('~/.openclaw/broker-audit.log'),
+        'MAILREEF_AUDIT_LOG',
+        os.path.expanduser('~/.openclaw/mailreef-audit.log'),
     )
 )
 
@@ -85,18 +85,18 @@ def broker_audit_log(entry: dict[str, Any]) -> None:
     """Append one durable JSON record. Audit failure is a security failure."""
     record = {
         'ts': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        'source': 'mac_email_read_broker',
+        'source': 'mailreef_broker',
         **entry,
     }
     for k in ('access_token', 'refresh_token', 'client_secret',
               'token', 'body', 'body_text', 'raw_body',
               'body_html', 'body_plain'):
         record.pop(k, None)
-    MAC_BROKER_AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
+    MAILREEF_AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY
     if hasattr(os, 'O_NOFOLLOW'):
         flags |= os.O_NOFOLLOW
-    fd = os.open(MAC_BROKER_AUDIT_LOG, flags, 0o600)
+    fd = os.open(MAILREEF_AUDIT_LOG, flags, 0o600)
     try:
         payload = (json.dumps(record, default=str, separators=(',', ':')) + '\n').encode()
         os.write(fd, payload)
@@ -226,8 +226,8 @@ def _atomic_private_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
 def _load_accounts_config(config_path: pathlib.Path | None = None) -> list[dict[str, Any]]:
     """Load accounts from Mac-local config."""
     if config_path is None:
-        config_path = MAC_CREDENTIAL_BASE / 'gmail-read-accounts.json'
-    _require_private_file(config_path, 'Gmail-read account registry')
+        config_path = MAC_CREDENTIAL_BASE / 'mailreef-accounts.json'
+    _require_private_file(config_path, 'Mailreef account registry')
     data = _load_json(config_path)
     return data.get('accounts', [])
 
@@ -242,10 +242,10 @@ def _get_account(accounts: list[dict[str, Any]], label: str) -> dict[str, Any]:
 def _get_access_token(account: dict[str, Any]) -> str:
     """Load and optionally refresh the access token. Mac-local only."""
     label = str(account.get('label') or '')
-    expected_dir = (MAC_CREDENTIAL_BASE / f'gmail-read-{label}').resolve()
+    expected_dir = (MAC_CREDENTIAL_BASE / f'mailreef-{label}').resolve()
     cred_dir = pathlib.Path(account['credential_dir']).expanduser().resolve()
     if cred_dir != expected_dir:
-        raise PermissionError('credential directory is outside the dedicated Gmail-read lane')
+        raise PermissionError('credential directory is outside the dedicated Mailreef lane')
     token_path = cred_dir / 'token.json'
     client_secret_path = cred_dir / 'client_secret.json'
 
@@ -255,7 +255,7 @@ def _get_access_token(account: dict[str, Any]) -> str:
             f'Run OAuth flow for account {account["label"]!r} on this Mac.'
         )
 
-    _require_private_file(token_path, 'Gmail-read token')
+    _require_private_file(token_path, 'Mailreef token')
     token = _load_json(token_path)
     access_token = token.get('access_token', '')
     expires_at = token.get('expires_at')
@@ -279,11 +279,11 @@ def _get_access_token(account: dict[str, Any]) -> str:
             raise SystemExit(
                 f'BROKER-ERROR: need client_secret.json at {client_secret_path} to refresh token'
             )
-        _require_private_file(client_secret_path, 'Gmail-read Desktop OAuth client')
+        _require_private_file(client_secret_path, 'Mailreef Desktop OAuth client')
         cs = _load_json(client_secret_path)
         cfg = cs.get('installed') or {}
         if not cfg.get('client_id') or not cfg.get('client_secret'):
-            raise PermissionError('Gmail-read client must be a Google Desktop OAuth client')
+            raise PermissionError('Mailreef client must be a Google Desktop OAuth client')
         body = urllib.parse.urlencode({
             'client_id': cfg['client_id'],
             'client_secret': cfg['client_secret'],
@@ -598,7 +598,7 @@ def broker_read(
 def _success_envelope(account: str, operation: str, data: Any) -> dict[str, Any]:
     return {
         'status': 'ok',
-        'broker': 'mac_email_read_broker',
+        'broker': 'mailreef_broker',
         'broker_version': '1.3.0',
         'account': account,
         'operation': operation,
@@ -610,7 +610,7 @@ def _success_envelope(account: str, operation: str, data: Any) -> dict[str, Any]
 def _error_envelope(account: str, error: str) -> dict[str, Any]:
     return {
         'status': 'error',
-        'broker': 'mac_email_read_broker',
+        'broker': 'mailreef_broker',
         'broker_version': '1.3.0',
         'account': account,
         'ts': datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -636,7 +636,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument('--days', type=int, default=DEFAULT_DAYS_BACK)
     p.add_argument('--read-body', action='store_true')
     p.add_argument('--config', type=pathlib.Path, default=None,
-                   help='Path to gmail-read-accounts.json')
+                   help='Path to mailreef-accounts.json')
     return p.parse_args(argv)
 
 

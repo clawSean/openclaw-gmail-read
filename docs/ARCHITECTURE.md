@@ -36,7 +36,7 @@
 - The child process receives a scrubbed environment.
 - Broker status, identity, version, required verdicts, and result count are
   allowlisted at the Gateway boundary.
-- The read credential must live under the exact `gmail-read-<account>` directory;
+- The read credential must live under the exact `mailreef-<account>` directory;
   account registry, client, and token files must be regular private files.
 - OAuth refreshes use atomic private-file replacement.
 - Audit failures are fatal; detector prose and exception text are never logged

@@ -1,9 +1,9 @@
 {
-  "name": "openclaw-email-read-plugin",
-  "version": "0.5.0",
+  "name": "mailreef-plugin",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
-  "description": "OpenClaw plugin for isolated, pre/post-screened Gmail summaries",
+  "description": "Mailreef plugin for isolated, pre/post-screened Gmail summaries",
   "scripts": {
     "check": "node scripts/check.mjs"
   },

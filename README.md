@@ -1,7 +1,8 @@
-# Screened Gmail Read for OpenClaw
+# Mailreef
 
-An experimental, disabled-by-default OpenClaw plugin for producing bounded Gmail
-summaries without exposing raw email to a tool-capable parent agent.
+A protective reef between hostile mail and a tool-capable agent. Mailreef is a
+disabled-by-default OpenClaw plugin that produces bounded Gmail summaries
+without exposing raw email to the parent agent.
 
 ## Security shape
 
@@ -19,13 +20,13 @@ This remains disabled until the separate activation checklist is completed.
 
 ## Components
 
-- `mac_email_read_broker.py` — Mac-local Gmail fetch, normalization, pre-screen,
+- `mailreef_broker.py` — Mac-local Gmail fetch, normalization, pre-screen,
   scope enforcement, and append-only audit.
-- `scripts/bootstrap_gmail_read_oauth.py` — local PKCE OAuth bootstrap that
+- `scripts/bootstrap_mailreef_oauth.py` — local PKCE OAuth bootstrap that
   requests only Gmail read-only plus identity scopes and never prints tokens.
 - `scripts/activation_preflight.py` — offline, secret-safe verification of the
   broker pin, account boundary, OAuth files/scopes, and host model policy.
-- `openclaw-email-read-plugin/` — native node invocation plus isolated OpenClaw
+- `mailreef-plugin/` — native node invocation plus isolated OpenClaw
   model completions and the post-summary gate.
 - `tests/` — offline Python security tests.
 - `docs/` — architecture and activation requirements.
@@ -34,7 +35,7 @@ This remains disabled until the separate activation checklist is completed.
 
 ```bash
 python3 -m unittest discover -s tests -v
-cd openclaw-email-read-plugin && npm run check
+cd mailreef-plugin && npm run check
 ```
 
 No test reads Gmail, OAuth material, or live email content.
@@ -45,7 +46,7 @@ Create a separate Google Desktop OAuth client for the read lane, download its
 JSON locally, then run:
 
 ```bash
-python3 scripts/bootstrap_gmail_read_oauth.py \
+python3 scripts/bootstrap_mailreef_oauth.py \
   --account sean \
   --expected-email you@example.com \
   --client-secret /path/to/downloaded-client.json
@@ -53,7 +54,7 @@ python3 scripts/bootstrap_gmail_read_oauth.py \
 
 The script opens Google consent locally, verifies the approving identity and
 exact scope set, and stores private files under
-`~/.openclaw/credentials/gmail-read-sean/`. It refuses to overwrite an existing
+`~/.openclaw/credentials/mailreef-sean/`. It refuses to overwrite an existing
 token unless `--replace` is explicitly supplied. After success, move the
 original downloaded client JSON to Trash so the private credential directory is
 the only retained copy.

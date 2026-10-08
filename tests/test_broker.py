@@ -10,7 +10,7 @@ from unittest import mock
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("gmail_broker", ROOT / "mac_email_read_broker.py")
+SPEC = importlib.util.spec_from_file_location("gmail_broker", ROOT / "mailreef_broker.py")
 broker = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(broker)
@@ -21,7 +21,7 @@ class BrokerSecurityTests(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tempdir.cleanup)
         self.audit = pathlib.Path(self.tempdir.name) / "audit.jsonl"
-        self.audit_patch = mock.patch.object(broker, "MAC_BROKER_AUDIT_LOG", self.audit)
+        self.audit_patch = mock.patch.object(broker, "MAILREEF_AUDIT_LOG", self.audit)
         self.audit_patch.start()
         self.addCleanup(self.audit_patch.stop)
 
@@ -66,7 +66,7 @@ class BrokerSecurityTests(unittest.TestCase):
         self.assertIsNone(result["sanitized_text"])
 
     def test_audit_failure_is_not_swallowed(self):
-        with mock.patch.object(broker, "MAC_BROKER_AUDIT_LOG", pathlib.Path("/dev/null/cannot-write")):
+        with mock.patch.object(broker, "MAILREEF_AUDIT_LOG", pathlib.Path("/dev/null/cannot-write")):
             with self.assertRaises(OSError):
                 broker.broker_audit_log({"action": "test"})
 
@@ -150,7 +150,7 @@ class BrokerSecurityTests(unittest.TestCase):
 
     def test_refreshed_token_write_is_atomic_and_private(self):
         with tempfile.TemporaryDirectory() as temp:
-            path = pathlib.Path(temp) / "gmail-read-sean" / "token.json"
+            path = pathlib.Path(temp) / "mailreef-sean" / "token.json"
             broker._atomic_private_json(path, {"refresh_token": "synthetic"})
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
             self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
@@ -178,7 +178,7 @@ class BrokerSecurityTests(unittest.TestCase):
                 broker.parse_args(["--account", "sean", "--list", "--ollama-host", "http://localhost"])
 
     def test_no_local_model_dependency_remains(self):
-        source = (ROOT / "mac_email_read_broker.py").read_text()
+        source = (ROOT / "mailreef_broker.py").read_text()
         for forbidden in ("ollama", "qwen", "phi4", "DEFAULT_DETECTOR_MODEL", "_ollama_detect"):
             self.assertNotIn(forbidden, source.lower())
 

@@ -5,14 +5,15 @@ The Google Cloud project may be new or existing. The OAuth client must be new.
 
 ## Required Google configuration
 
-1. Select a Google Cloud project controlled by JPop or Sean.
+1. Create a dedicated project named **Sean Mailreef**. Use a globally unique
+   project id such as `sean-mailreef-<suffix>`.
 2. Enable **Gmail API** for that project.
 3. Configure the OAuth consent screen as External and Testing for the bounded
    pilot unless the project already has an appropriate production consent
    screen.
 4. Add Sean's Google account as a test user while the app is in Testing.
 5. Create a new OAuth client: **Desktop app**.
-6. Name it `gmail-read-sean`.
+6. Name it `mailreef-sean`.
 7. Download its client JSON to the Mac.
 
 Do not reuse any Gmail-send, Drive, Calendar, browser, web-app, or installed-app
@@ -33,7 +34,7 @@ PKCE bootstrap with the expected Sean account. The bootstrap:
 - requests only `gmail.readonly`, `openid`, and `userinfo.email`;
 - verifies the account that approved consent;
 - refuses a client id already used by a Gmail-send credential;
-- writes private files under `~/.openclaw/credentials/gmail-read-sean/`;
+- writes private files under `~/.openclaw/credentials/mailreef-sean/`;
 - never prints tokens.
 
 The downloaded source JSON is moved to Trash after the private verified copy is

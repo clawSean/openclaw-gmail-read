@@ -16,7 +16,7 @@
 *.pem
 client_secret*.json
 token.json
-gmail-read-accounts.json
+mailreef-accounts.json
 secrets/
 tmp/
 scratch/

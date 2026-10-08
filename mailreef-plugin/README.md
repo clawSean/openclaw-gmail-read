@@ -1,12 +1,13 @@
-# Screened Gmail Read Plugin
+# Mailreef Plugin
 
-OpenClaw plugin layer for the disabled-by-default screened Gmail project.
+OpenClaw plugin layer for Mailreef, the disabled-by-default screened Gmail
+reader.
 
 It registers:
 
-- owner-only tool `gmail_read_screened`
-- authenticated command `/gmailread`
-- dangerous node-host command `screened-gmail-read.broker`
+- owner-only tool `mailreef_read`
+- authenticated command `/mailreef`
+- dangerous node-host command `mailreef.broker`
 - a validating node-invoke policy
 
 The broker path, Python executable, node target, and timeout are operator config;
@@ -24,7 +25,7 @@ Defaults:
 - maximum scope: 5 messages / 7 days
 - summarizer: `openai/gpt-5.6-luna`
 - post-detector: `openai/gpt-5.6-luna`
-- broker: `/Users/Sean/projects/openclaw-gmail-read/mac_email_read_broker.py`
+- broker: `/Users/Sean/projects/mailreef/mailreef_broker.py`
 
 Verification:
 

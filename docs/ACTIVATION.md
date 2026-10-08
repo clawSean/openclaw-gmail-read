@@ -3,14 +3,14 @@
 Activation is a separate operational change. Do not treat the offline build as
 live until every item below has a durable receipt.
 
-1. Keep `plugins.entries.screened-gmail-read.enabled` false while validating.
+1. Keep `plugins.entries.mailreef.enabled` false while validating.
 2. Confirm the Mac account uses only `gmail.readonly` plus identity scope and
    has `can_read: true` explicitly.
 3. Confirm the configured broker path matches the reviewed canonical file and
    its pinned SHA-256.
-4. Create the token with `scripts/bootstrap_gmail_read_oauth.py`; verify the
+4. Create the token with `scripts/bootstrap_mailreef_oauth.py`; verify the
    approving identity, exact scope set, private file modes, and separate
-   `gmail-read-sean` credential directory. The bootstrap must create/update the
+   `mailreef-sean` credential directory. The bootstrap must create/update the
    account registry with `can_read: false`. Move the downloaded source JSON to
    Trash after the verified private copy exists.
 5. Confirm the read plugin cannot access any `gmail.send` credential directory.
@@ -20,7 +20,7 @@ live until every item below has a durable receipt.
 8. Verify the plugin model policy explicitly allows only
    `openai/gpt-5.6-luna`.
 9. Configure native completion trust under
-   `plugins.entries.screened-gmail-read.llm` with
+   `plugins.entries.mailreef.llm` with
    `allowModelOverride: true`, and restrict both `allowedModels` and
    `allowedCompletionModels` to that model.
 10. Prove local Gateway execution (or an explicitly configured node identity),

@@ -7,14 +7,14 @@ const source = await readFile(new URL("src/index.js", root), "utf8");
 const manifest = JSON.parse(await readFile(new URL("openclaw.plugin.json", root), "utf8"));
 const mod = await import(pathToFileURL(new URL("src/index.js", root).pathname));
 
-assert.equal(manifest.id, "screened-gmail-read");
-assert.equal(manifest.version, "0.5.0");
-assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.5.0");
+assert.equal(manifest.id, "mailreef");
+assert.equal(manifest.version, "0.6.0");
+assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.6.0");
 assert.equal(typeof mod.default, "function");
 assert(source.includes("isolated-agent-runtime"));
 assert(!source.includes("unsafe-no-detector"));
 assert(!source.includes('new Set(["SAFE", "SKIPPED"])'));
-await mod.verifyBrokerArtifact(new URL("../../mac_email_read_broker.py", import.meta.url));
+await mod.verifyBrokerArtifact(new URL("../../mailreef_broker.py", import.meta.url));
 await assert.rejects(() => mod.verifyBrokerArtifact(new URL("../README.md", import.meta.url)), /BROKER_ARTIFACT_MISMATCH/);
 
 const benignSummary = {
@@ -30,7 +30,7 @@ const benignSummary = {
 function brokerPayload(body = "Quarterly report is ready. Please review by Friday. https://example.com/report") {
   return {
     status: "ok",
-    broker: "mac_email_read_broker",
+    broker: "mailreef_broker",
     broker_version: "1.3.0",
     account: "sean",
     operation: "read_body",
@@ -84,10 +84,10 @@ const ok = makeApi(brokerPayload(), [
   { text: JSON.stringify(benignSummary), model: "openai/gpt-5.6-luna", execution: { owner: "isolated-agent-runtime" } },
   { text: JSON.stringify({ verdict: "SAFE", reasonCodes: ["none"] }), model: "openai/gpt-5.6-luna", execution: { owner: "isolated-agent-runtime" } },
 ]);
-assert.equal(ok.tool.name, "gmail_read_screened");
-assert.equal(ok.command.name, "gmailread");
-assert.equal(ok.nodeCommand.command, "screened-gmail-read.broker");
-assert(ok.policy.commands.includes("screened-gmail-read.broker"));
+assert.equal(ok.tool.name, "mailreef_read");
+assert.equal(ok.command.name, "mailreef");
+assert.equal(ok.nodeCommand.command, "mailreef.broker");
+assert(ok.policy.commands.includes("mailreef.broker"));
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "dryRun"), false);
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "account"), false);
 assert.equal(ok.tool.parameters.properties.max.maximum, 5);
@@ -146,7 +146,7 @@ assert.equal(deterministicBlock.calls.length, 1, "post-detector cannot clear a d
 const outage = makeApi(brokerPayload(), [new Error("provider unavailable")]);
 const outageResult = await outage.tool.execute("tc-outage", { action: "read_body", messageId: "m-1" });
 assert.equal(outageResult.details.status, "failed");
-assert.equal(outageResult.content[0].text, "Screened Gmail read failed closed.");
+assert.equal(outageResult.content[0].text, "Mailreef failed closed.");
 assert(!JSON.stringify(outageResult).includes("provider unavailable"));
 
 const skippedPayload = brokerPayload();
@@ -196,8 +196,8 @@ const localApi = makeApi(brokerPayload(), []).api;
 localApi.pluginConfig.defaultNodeId = "";
 const localDryRun = await mod.invokeBroker(localApi, { action: "list", account: "sean", dryRun: true });
 assert.equal(localDryRun.payload.dryRun, true);
-assert.equal(localDryRun.payload.argv[1], new URL("../../mac_email_read_broker.py", import.meta.url).pathname);
+assert.equal(localDryRun.payload.argv[1], new URL("../../mailreef_broker.py", import.meta.url).pathname);
 const help = await ok.command.handler({ args: "" });
-assert.match(help.text, /Usage: \/gmailread/);
+assert.match(help.text, /Usage: \/mailreef/);
 
-console.log("screened-gmail-read security checks passed");
+console.log("mailreef security checks passed");

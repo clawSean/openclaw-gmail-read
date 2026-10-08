@@ -8,7 +8,7 @@ from io import StringIO
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / 'scripts' / 'bootstrap_gmail_read_oauth.py'
+SCRIPT = ROOT / 'scripts' / 'bootstrap_mailreef_oauth.py'
 SPEC = importlib.util.spec_from_file_location('gmail_oauth_bootstrap', SCRIPT)
 oauth = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -56,12 +56,12 @@ class OAuthBootstrapTests(unittest.TestCase):
     def test_oauth_registry_is_written_disabled_and_preserves_other_accounts(self):
         with tempfile.TemporaryDirectory() as temp:
             base = pathlib.Path(temp)
-            registry = base / 'gmail-read-accounts.json'
+            registry = base / 'mailreef-accounts.json'
             oauth._atomic_private_json(registry, {'accounts': [
                 {'label': 'other', 'credential_dir': '/private/other', 'can_read': True},
                 {'label': 'sean', 'credential_dir': '/stale', 'can_read': True},
             ]})
-            read_dir = base / 'gmail-read-sean'
+            read_dir = base / 'mailreef-sean'
             result = oauth._upsert_disabled_account_registry(base, 'sean', read_dir)
             data = json.loads(result.read_text())
             self.assertEqual(result.stat().st_mode & 0o777, 0o600)
