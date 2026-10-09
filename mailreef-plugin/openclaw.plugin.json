@@ -1,7 +1,7 @@
 {
   "id": "mailreef",
   "name": "Mailreef",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Discover historical Gmail without exposing prose, then screen selected messages through a Mac-local broker and isolated model gates.",
   "contracts": {
     "tools": ["mailreef_read"]
