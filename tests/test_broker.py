@@ -82,6 +82,17 @@ class BrokerSecurityTests(unittest.TestCase):
             self.assertIsNotNone(result[name])
         self.assertEqual(result["aggregate_verdict"], "SAFE")
 
+    def test_body_read_envelope_uses_plugin_operation(self):
+        account = {"can_read": True}
+        with mock.patch.object(broker, "_load_accounts_config", return_value=[{"label": "sean", **account}]), \
+             mock.patch.object(broker, "_get_account", return_value=account), \
+             mock.patch.object(broker, "_get_access_token", return_value="synthetic"), \
+             mock.patch.object(broker, "validate_token_scopes"), \
+             mock.patch.object(broker, "_get_message_full", return_value={}), \
+             mock.patch.object(broker, "screen_fields", return_value={"body_verdict": "SAFE"}):
+            result = broker.broker_read("sean", "m1", read_body=True)
+        self.assertEqual(result["operation"], "read_body")
+
     def test_injected_field_is_removed(self):
         with mock.patch.object(broker, "detect_injection", return_value=(True, "attack echoed by model", 0.9)):
             result = broker.screen_fields(

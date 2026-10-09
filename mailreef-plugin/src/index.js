@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const NODE_COMMAND = "mailreef.broker";
 const DEFAULT_SCRIPT_PATH = "/Users/Sean/projects/mailreef/mailreef_broker.py";
-const EXPECTED_BROKER_SHA256 = "1b6046d1057ae80b0489a8b64785bce15bdf60dc337760489bb2b4c5a87325eb";
+const EXPECTED_BROKER_SHA256 = "1561bb18eae6e8868c6d0225510b86bbf41dd4e61ce79d91aa55002f7384fa9b";
 const DEFAULT_PYTHON = "python3";
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_SUMMARY_TIMEOUT_MS = 30000;
@@ -321,6 +321,7 @@ async function executeScreenedRead(api, params) {
     const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_SCOPE_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|BROKER_(?:MESSAGE|THREAD)_ID_INVALID|ACCOUNT_OVERRIDE_FORBIDDEN|MODEL_POLICY_MISMATCH|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+)$/.test(rawCode)
       ? rawCode
       : "UPSTREAM_FAILURE";
+    api.logger?.warn?.(`mailreef read withheld: ${code}`);
     return resultText(blocked ? "Mailreef blocked this email at a safety gate." : "Mailreef failed closed.", {
       status: blocked ? "blocked" : "failed",
       code,

@@ -574,7 +574,7 @@ def broker_read(
             'message_id': message_id,
             'body_verdict': screened['body_verdict'],
         })
-        return _success_envelope(account_label, 'read', result)
+        return _success_envelope(account_label, 'read_body', result)
 
     meta = _get_message_metadata(access_token, message_id)
     screened = screen_fields({
