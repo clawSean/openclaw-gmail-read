@@ -10,8 +10,9 @@ It registers:
 - dangerous node-host command `mailreef.broker`
 - a validating node-invoke policy
 
-The broker path, Python executable, node target, and timeout are operator config;
-caller input cannot override them. Successful broker output is transformed by a
+The broker path, Python executable, node target, timeout, and account allowlist
+are operator config. A caller may select only an explicitly allowlisted account;
+the configured default is used when omitted. Successful broker output is transformed by a
 native zero-tool Luna completion, strict deterministic validation, and a
 fresh zero-tool Luna relay detector. Raw source and blocked candidates are not
 returned in tool details.
@@ -27,6 +28,7 @@ runtime dependency.
 Defaults:
 
 - account: `sean`
+- allowed accounts: `sean` only until additional isolated OAuth grants are activated
 - recent scope: 5 messages / 7 days
 - historical discovery: 10 IDs/timestamps, 366-day window, 10-year age floor,
   sender/subject selector, inbox-only, no pagination

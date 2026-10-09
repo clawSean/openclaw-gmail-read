@@ -27,8 +27,9 @@
    `{url, hostname, untrusted: true}`. Every result is labeled
    `untrustedEmailDerived: true` and `canAuthorizeActions: false`. Blocked paths
    contain no source or candidate content.
-7. **The account is operator-bound.** Tool callers cannot select another Gmail
-   account. The configured account, broker response account, operation, message
+7. **The account is operator-allowlisted.** Tool callers may select only a Gmail
+   account label explicitly enabled in plugin configuration; omission uses the
+   configured default. The selected account, broker response account, operation, message
    identifiers, credential directory, and Desktop OAuth client shape are all
    checked before any isolated model call.
 8. **Historical discovery is prose-free.** The caller supplies separate date,

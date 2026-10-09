@@ -81,6 +81,9 @@ the only retained copy.
 ## Limits
 
 - Gmail read-only only; no send/modify/label/delete capabilities.
+- Multiple accounts use isolated `mailreef-<label>` credential directories and
+  registry rows. The tool can select only labels in the operator-configured
+  allowlist; it cannot name an arbitrary Gmail account or credential path.
 - Recent triage remains capped at 5 messages / 7 days per operation.
 - Historical discovery accepts structured date plus sender/subject filters,
   returns at most 10 message IDs and Gmail internal timestamps, and makes zero

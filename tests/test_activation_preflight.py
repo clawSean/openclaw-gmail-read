@@ -78,6 +78,40 @@ class ActivationPreflightTests(unittest.TestCase):
         failed = {item['name'] for item in result['checks'] if not item['ok']}
         self.assertIn('OAuth token private', failed)
 
+    def test_secondary_account_prepare_and_live_routing(self):
+        with tempfile.TemporaryDirectory() as raw:
+            args = self._fixture(pathlib.Path(raw))
+            credentials = args.credential_base
+            sean_dir = credentials / 'mailreef-sean'
+            jpop_dir = credentials / 'mailreef-jpop'
+            jpop_dir.mkdir(mode=0o700)
+            jpop_dir.chmod(0o700)
+            for name in ('client_secret.json', 'token.json'):
+                target = jpop_dir / name
+                target.write_bytes((sean_dir / name).read_bytes())
+                target.chmod(0o600)
+            registry_path = credentials / 'mailreef-accounts.json'
+            registry = json.loads(registry_path.read_text())
+            registry['accounts'].append({'label': 'jpop', 'credential_dir': str(jpop_dir), 'can_read': False})
+            registry_path.write_text(json.dumps(registry))
+            registry_path.chmod(0o600)
+            config = json.loads(args.openclaw_config.read_text())
+            entry = config['plugins']['entries']['mailreef']
+            entry['enabled'] = True
+            entry['config']['allowedAccounts'] = ['sean']
+            args.openclaw_config.write_text(json.dumps(config))
+            args.account = 'jpop'
+            args.phase = 'account_prepare'
+            self.assertEqual(preflight.run_checks(args)['status'], 'ready')
+
+            registry['accounts'][-1]['can_read'] = True
+            registry_path.write_text(json.dumps(registry))
+            registry_path.chmod(0o600)
+            entry['config']['allowedAccounts'].append('jpop')
+            args.openclaw_config.write_text(json.dumps(config))
+            args.phase = 'live'
+            self.assertEqual(preflight.run_checks(args)['status'], 'ready')
+
 
 if __name__ == '__main__':
     unittest.main()

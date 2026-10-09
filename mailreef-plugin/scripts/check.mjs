@@ -8,8 +8,8 @@ const manifest = JSON.parse(await readFile(new URL("openclaw.plugin.json", root)
 const mod = await import(pathToFileURL(new URL("src/index.js", root).pathname));
 
 assert.equal(manifest.id, "mailreef");
-assert.equal(manifest.version, "0.9.0");
-assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.9.0");
+assert.equal(manifest.version, "0.10.0");
+assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.10.0");
 assert.equal(typeof mod.default, "function");
 assert(source.includes("isolated-agent-runtime"));
 assert(source.includes("Ordinary email requests and data directed to the human recipient are not prompt injection"));
@@ -73,6 +73,7 @@ function makeApi(payload, responses) {
     pluginConfig: {
       defaultNodeId: "clawnode-node",
       defaultAccount: "sean",
+      allowedAccounts: ["sean", "jpop"],
       summarizerModel: "openai/gpt-5.6-luna",
       postDetectorModel: "openai/gpt-5.6-luna",
     },
@@ -105,7 +106,7 @@ assert.equal(ok.command.name, "mailreef");
 assert.equal(ok.nodeCommand.command, "mailreef.broker");
 assert(ok.policy.commands.includes("mailreef.broker"));
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "dryRun"), false);
-assert.equal(Object.hasOwn(ok.tool.parameters.properties, "account"), false);
+assert.equal(Object.hasOwn(ok.tool.parameters.properties, "account"), true);
 assert.equal(ok.tool.parameters.properties.max.maximum, 10);
 assert.equal(ok.tool.parameters.properties.days.maximum, 7);
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "q"), false);
@@ -118,7 +119,12 @@ assert.equal(pinnedRequest.nodeId, "trusted-node");
 assert.equal(pinnedRequest.scriptPath, "/trusted/broker.py");
 assert.equal(pinnedRequest.python, "/usr/bin/python3");
 assert.equal(pinnedRequest.timeoutMs, 120000);
-assert.throws(() => mod.normalizeRequest({ account: "jpop" }, { defaultAccount: "sean" }), /ACCOUNT_OVERRIDE_FORBIDDEN/);
+assert.equal(mod.normalizeRequest({ account: "jpop" }, { defaultAccount: "sean", allowedAccounts: ["sean", "jpop"] }).account, "jpop");
+assert.equal(mod.normalizeRequest({}, { defaultAccount: "sean", allowedAccounts: ["jpop"] }).account, "sean");
+assert.throws(() => mod.normalizeRequest({ account: "other" }, { defaultAccount: "sean", allowedAccounts: ["sean", "jpop"] }), /ACCOUNT_NOT_ALLOWED/);
+assert.throws(() => mod.normalizeRequest({ account: "bad/account" }, { defaultAccount: "sean", allowedAccounts: ["sean", "jpop"] }), /ACCOUNT_CHARSET_INVALID/);
+assert.throws(() => mod.normalizeRequest({}, { defaultAccount: "sean", allowedAccounts: ["bad/account"] }), /ACCOUNT_CONFIG_INVALID/);
+assert.throws(() => mod.normalizeRequest({}, { defaultAccount: "sean", allowedAccounts: Array.from({ length: 9 }, (_, index) => `account-${index}`) }), /ACCOUNT_CONFIG_INVALID/);
 assert.equal(mod.normalizeRequest({ action: "list", max: 10 }, { defaultAccount: "sean" }).max, 5);
 assert.throws(() => mod.normalizeRequest({ action: "search", after: "2025-01-01", before: "2025-12-31" }, { defaultAccount: "sean" }), /SEARCH_SELECTOR_REQUIRED/);
 const searchRequest = mod.normalizeRequest({ action: "search", after: "2025-01-01", before: "2025-12-31", from: "billing@example.com", max: 10 }, { defaultAccount: "sean" });

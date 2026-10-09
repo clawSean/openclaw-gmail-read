@@ -75,10 +75,22 @@ def run_checks(args: argparse.Namespace) -> dict[str, Any]:
             entry = oc.get('plugins', {}).get('entries', {}).get('mailreef', {})
             cfg = entry.get('config', {})
             llm = entry.get('llm', {})
-            expected_enabled = args.phase == 'live'
+            expected_enabled = args.phase in {'account_prepare', 'live'}
+            default_account = str(cfg.get('defaultAccount') or '')
+            allowed_accounts = cfg.get('allowedAccounts') or []
+            account_selectable = account == default_account or account in allowed_accounts
+            if args.phase == 'prepare':
+                routing_ok = default_account == account
+                routing_detail = f'expected initial default account {account!r}'
+            elif args.phase == 'account_prepare':
+                routing_ok = not account_selectable
+                routing_detail = f'account {account!r} must remain unavailable before activation'
+            else:
+                routing_ok = account_selectable
+                routing_detail = f'account {account!r} must be operator-allowlisted'
             checks.extend([
                 Check('plugin activation phase', entry.get('enabled') is expected_enabled, f'expected enabled={str(expected_enabled).lower()}'),
-                Check('default account pinned', cfg.get('defaultAccount') == account, f'expected account {account!r}'),
+                Check('account routing phase', routing_ok, routing_detail),
                 Check('broker path canonical', pathlib.Path(str(cfg.get('macBrokerScriptPath', ''))).expanduser().resolve() == broker, 'configured path matches canonical broker'),
                 Check('plugin models pinned', cfg.get('summarizerModel') == MODEL and cfg.get('postDetectorModel') == MODEL, f'both stages must use {MODEL}'),
                 Check('model override explicitly trusted', llm.get('allowModelOverride') is True, 'host trust must be explicit'),
@@ -152,7 +164,7 @@ def run_checks(args: argparse.Namespace) -> dict[str, Any]:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Offline activation preflight; prints no credential values.')
-    parser.add_argument('--phase', choices=('prepare', 'live'), default='prepare')
+    parser.add_argument('--phase', choices=('prepare', 'account_prepare', 'live'), default='prepare')
     parser.add_argument('--account', default='sean')
     parser.add_argument('--project-root', type=pathlib.Path, default=pathlib.Path(__file__).resolve().parents[1])
     parser.add_argument('--credential-base', type=pathlib.Path, default=pathlib.Path('~/.openclaw/credentials').expanduser())

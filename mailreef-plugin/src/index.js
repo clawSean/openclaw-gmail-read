@@ -56,6 +56,13 @@ function positiveInt(value, fallback, limit = Number.MAX_SAFE_INTEGER) {
   return Number.isFinite(n) && n > 0 ? Math.min(Math.trunc(n), limit) : fallback;
 }
 function parseBool(value) { return value === true || value === "true"; }
+function configuredAccounts(pluginConfig = {}) {
+  const defaultAccount = text(pluginConfig.defaultAccount) || "sean";
+  const configured = Array.isArray(pluginConfig.allowedAccounts) ? pluginConfig.allowedAccounts.map(text).filter(Boolean) : [];
+  const accounts = [...new Set([defaultAccount, ...configured])];
+  if (accounts.length > 8 || accounts.some((account) => !SAFE_ACCOUNT_RE.test(account))) throw new Error("ACCOUNT_CONFIG_INVALID");
+  return { defaultAccount, accounts };
+}
 function normalizeAction(value) {
   const action = text(value).toLowerCase();
   if (["read-body", "read_body", "readbody"].includes(action)) return "read_body";
@@ -103,10 +110,11 @@ function resultText(message, details = {}) { return { content: [{ type: "text", 
 
 function normalizeRequest(input = {}, pluginConfig = {}) {
   const action = normalizeAction(input.action);
-  const configuredAccount = text(pluginConfig.defaultAccount) || "sean";
+  const { defaultAccount, accounts } = configuredAccounts(pluginConfig);
   const requestedAccount = text(input.account);
-  if (requestedAccount && requestedAccount !== configuredAccount) throw new Error("ACCOUNT_OVERRIDE_FORBIDDEN");
-  const account = configuredAccount;
+  const account = requestedAccount || defaultAccount;
+  if (!SAFE_ACCOUNT_RE.test(account)) throw new Error("ACCOUNT_CHARSET_INVALID");
+  if (!accounts.includes(account)) throw new Error("ACCOUNT_NOT_ALLOWED");
   const messageId = text(input.messageId);
   const nodeId = text(pluginConfig.defaultNodeId);
   const python = text(pluginConfig.macBrokerPython) || DEFAULT_PYTHON;
@@ -119,7 +127,6 @@ function normalizeRequest(input = {}, pluginConfig = {}) {
   const before = text(input.before);
   const from = text(input.from);
   const subjectContains = text(input.subjectContains);
-  if (!SAFE_ACCOUNT_RE.test(account)) throw new Error("ACCOUNT_CHARSET_INVALID");
   if (action === "read_body" && !messageId) throw new Error("MESSAGE_ID_REQUIRED");
   if (messageId && !SAFE_MESSAGE_ID_RE.test(messageId)) throw new Error("MESSAGE_ID_CHARSET_INVALID");
   if (action === "search") {
@@ -438,7 +445,7 @@ async function executeScreenedRead(api, params) {
   } catch (err) {
     const rawCode = text(err?.message);
     const blocked = rawCode === "POST_DETECTOR_BLOCKED" || rawCode.startsWith("BROKER_BLOCKED_");
-    const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_SCOPE_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|BROKER_MALFORMED_OUTPUT|BROKER_(?:MESSAGE|THREAD)_ID_INVALID|BROKER_INTERNAL_DATE_INVALID|BROKER_SEARCH_UNSCREENED|BROKER_SEARCH_ENTRY_[A-Z0-9_]+|ACCOUNT_OVERRIDE_FORBIDDEN|ACCOUNT_CHARSET_INVALID|MESSAGE_ID_(?:REQUIRED|CHARSET_INVALID)|SEARCH_(?:MAX_INVALID|DATE_INVALID|SELECTOR_REQUIRED)|MODEL_POLICY_MISMATCH|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+|SUMMARIZER_UPSTREAM_[A-Z0-9_]+|POST_DETECTOR_UPSTREAM_[A-Z0-9_]+)$/.test(rawCode)
+    const code = /^(?:POST_DETECTOR_BLOCKED|BROKER_BLOCKED_[A-Z_]+|BROKER_FAILED|BROKER_ATTESTATION_MISMATCH|BROKER_SCOPE_MISMATCH|BROKER_RESULT_LIMIT|BROKER_ENTRY_MALFORMED|BROKER_MALFORMED_OUTPUT|BROKER_(?:MESSAGE|THREAD)_ID_INVALID|BROKER_INTERNAL_DATE_INVALID|BROKER_SEARCH_UNSCREENED|BROKER_SEARCH_ENTRY_[A-Z0-9_]+|ACCOUNT_(?:CONFIG_INVALID|NOT_ALLOWED|CHARSET_INVALID)|MESSAGE_ID_(?:REQUIRED|CHARSET_INVALID)|SEARCH_(?:MAX_INVALID|DATE_INVALID|SELECTOR_REQUIRED)|MODEL_POLICY_MISMATCH|ISOLATED_COMPLETION_UNAVAILABLE|SUMMARY_[A-Z0-9_]+|POST_DETECTOR_[A-Z0-9_]+|SUMMARIZER_UPSTREAM_[A-Z0-9_]+|POST_DETECTOR_UPSTREAM_[A-Z0-9_]+)$/.test(rawCode)
       ? rawCode
       : "UPSTREAM_FAILURE";
     api.logger?.warn?.(`mailreef read withheld: ${code}`);
@@ -450,7 +457,7 @@ async function executeScreenedRead(api, params) {
   }
 }
 
-export { normalizeRequest, buildBrokerArgs, verifyBrokerArtifact, invokeBroker, validateSummary, validatePostVerdict, extractUntrustedHttpsLinks, summarizeAndGate, processBrokerPayload };
+export { configuredAccounts, normalizeRequest, buildBrokerArgs, verifyBrokerArtifact, invokeBroker, validateSummary, validatePostVerdict, extractUntrustedHttpsLinks, summarizeAndGate, processBrokerPayload };
 
 export default function register(api) {
   api.registerNodeHostCommand?.({ command: NODE_COMMAND, cap: "gmail-read", dangerous: true, handle: runLocalBroker });
@@ -471,6 +478,7 @@ export default function register(api) {
       type: "object",
       additionalProperties: false,
       properties: {
+        account: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$", description: "Operator-approved Mailreef account label; omit for the configured default." },
         action: { type: "string", enum: ["list", "read_body", "search"], default: "list" },
         messageId: { type: "string" },
         max: { type: "number", minimum: 1, maximum: MAX_SEARCH_LIMIT },

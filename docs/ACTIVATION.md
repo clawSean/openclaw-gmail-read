@@ -46,7 +46,12 @@ live until every item below has a durable receipt.
     source payload, OAuth material, or detector prose appears in tool details,
     logs, or chat history.
 14. Only then describe the capability as live. Extending to another account is
-    a separate scope and OAuth review.
+    a separate scope and OAuth review. For a secondary account while Mailreef is
+    already live, keep the new registry row `can_read: false` and absent from
+    `allowedAccounts`, then run `--phase account_prepare --account <label>`.
+    After explicit activation, atomically set `can_read: true`, add only that
+    label to `allowedAccounts`, hot-reload, and require `--phase live --account
+    <label>` plus bounded canaries. The existing default account stays live.
 
 Rollback: disable the plugin entry. Preserve audit records and test receipts;
 do not delete evidence during incident review.
