@@ -166,6 +166,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument('--expected-email', required=True, help='Google account that must approve the grant')
     parser.add_argument('--client-secret', required=True, type=pathlib.Path, help='Downloaded Google Desktop OAuth JSON')
     parser.add_argument('--credential-base', type=pathlib.Path, default=pathlib.Path('~/.openclaw/credentials').expanduser())
+    parser.add_argument('--callback-bind', default='127.0.0.1', help='Callback listener address (redirect URI remains loopback)')
+    parser.add_argument('--no-browser', action='store_true', help='Do not open a browser on this host')
+    parser.add_argument('--auth-url-out', type=pathlib.Path, help='Write the authorization URL to a private file')
     parser.add_argument('--replace', action='store_true', help='Replace an existing read token after explicit review')
     return parser.parse_args(argv)
 
@@ -194,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
     state = secrets.token_urlsafe(32)
     _CallbackHandler.result = {}
-    server = http.server.HTTPServer(('127.0.0.1', 0), _CallbackHandler)
+    server = http.server.HTTPServer((args.callback_bind, 0), _CallbackHandler)
     server.timeout = 300
     redirect_uri = f'http://127.0.0.1:{server.server_port}/'
     auth_url = client['auth_uri'] + '?' + urllib.parse.urlencode({
@@ -212,11 +215,18 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f'Opening Google consent for account label {label!r}.')
     print('Approve only Gmail read-only and identity access. Tokens will not be printed.')
-    if not webbrowser.open(auth_url, new=1, autoraise=True):
+    auth_url_path = args.auth_url_out.expanduser() if args.auth_url_out else None
+    if auth_url_path:
+        _atomic_private_json(auth_url_path, {'auth_url': auth_url})
+    if not args.no_browser and not webbrowser.open(auth_url, new=1, autoraise=True):
         print('Browser launch failed. Open this URL locally:')
         print(auth_url)
-    server.handle_request()
-    server.server_close()
+    try:
+        server.handle_request()
+    finally:
+        server.server_close()
+        if auth_url_path and auth_url_path.exists():
+            auth_url_path.unlink()
     callback = _CallbackHandler.result
     if callback.get('state') != state or not callback.get('code'):
         raise SystemExit('OAuth callback was missing or failed state validation.')

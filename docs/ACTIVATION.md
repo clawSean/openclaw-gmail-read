@@ -13,6 +13,10 @@ live until every item below has a durable receipt.
    `mailreef-sean` credential directory. The bootstrap must create/update the
    account registry with `can_read: false`. Move the downloaded source JSON to
    Trash after the verified private copy exists.
+   When consent runs in a JPop-controlled browser on another Tailscale device,
+   use `--callback-bind <ClawPop-Tailscale-IP> --no-browser --auth-url-out
+   <private-file>`; keep the registered redirect URI on loopback and relay the
+   resulting query directly over Tailscale without printing or copying it.
 5. Confirm the read plugin cannot access any `gmail.send` credential directory.
 6. Run both offline suites and record the commit plus test output.
 7. Run `python3 scripts/activation_preflight.py --phase prepare`; require a
