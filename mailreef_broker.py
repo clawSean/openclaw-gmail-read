@@ -69,6 +69,7 @@ SCOPES = (
     'openid',
     'https://www.googleapis.com/auth/userinfo.email',
 )
+GOOGLE_IDENTITY_SCOPE_ALIASES = {'email'}
 
 FORBIDDEN_SCOPE_FRAGMENTS = (
     'gmail.send', 'gmail.modify', 'gmail.compose',
@@ -313,7 +314,8 @@ def validate_token_scopes(access_token: str) -> None:
         token_info = json.loads(resp.read().decode())
     scope_value = token_info.get('scope', '')
     scopes = set(scope_value.split()) if isinstance(scope_value, str) else set(scope_value or [])
-    if scopes != set(SCOPES):
+    expected = set(SCOPES)
+    if scopes not in (expected, expected | GOOGLE_IDENTITY_SCOPE_ALIASES):
         raise PermissionError('OAuth scope set does not exactly match the read lane')
     if any(fragment in scope for scope in scopes for fragment in FORBIDDEN_SCOPE_FRAGMENTS):
         raise PermissionError('forbidden Gmail scope present')

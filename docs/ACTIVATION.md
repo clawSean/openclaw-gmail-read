@@ -6,6 +6,9 @@ live until every item below has a durable receipt.
 1. Keep `plugins.entries.mailreef.enabled` false while validating.
 2. Confirm the Mac account uses only `gmail.readonly` plus identity scope and
    has `can_read: true` explicitly.
+   Google may report the identity alias `email` in addition to `openid` and
+   `userinfo.email`; normalize only that alias and reject every other extra
+   scope.
 3. Confirm the configured broker path matches the reviewed canonical file and
    its pinned SHA-256.
 4. Create the token with `scripts/bootstrap_mailreef_oauth.py`; verify the

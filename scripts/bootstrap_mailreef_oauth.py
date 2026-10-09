@@ -28,6 +28,7 @@ SCOPES = (
     'openid',
     'https://www.googleapis.com/auth/userinfo.email',
 )
+GOOGLE_IDENTITY_SCOPE_ALIASES = {'email'}
 SAFE_LABEL_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
 
 
@@ -68,9 +69,9 @@ def _atomic_private_json(path: pathlib.Path, payload: dict[str, Any]) -> None:
 def _validate_scopes(scope_value: Any) -> set[str]:
     scopes = set(scope_value.split()) if isinstance(scope_value, str) else set(scope_value or [])
     expected = set(SCOPES)
-    if scopes != expected:
+    if scopes not in (expected, expected | GOOGLE_IDENTITY_SCOPE_ALIASES):
         raise ValueError('OAuth grant does not exactly match the read lane')
-    return scopes
+    return expected
 
 
 def _assert_distinct_from_send_clients(client_id: str, credential_base: pathlib.Path) -> None:

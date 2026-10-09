@@ -19,6 +19,8 @@ class OAuthBootstrapTests(unittest.TestCase):
     def test_scopes_are_exact_and_read_only(self):
         scopes = oauth._validate_scopes(' '.join(oauth.SCOPES))
         self.assertEqual(scopes, set(oauth.SCOPES))
+        aliased = oauth._validate_scopes(' '.join((*oauth.SCOPES, 'email')))
+        self.assertEqual(aliased, set(oauth.SCOPES))
         with self.assertRaises(ValueError):
             oauth._validate_scopes(' '.join((*oauth.SCOPES, 'https://www.googleapis.com/auth/gmail.send')))
         with self.assertRaises(ValueError):

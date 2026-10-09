@@ -140,6 +140,14 @@ class BrokerSecurityTests(unittest.TestCase):
         with mock.patch.object(broker.urllib.request, "urlopen", return_value=response):
             broker.validate_token_scopes("not-a-real-token")
 
+    def test_broker_accepts_google_email_identity_alias(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps({
+            "scope": " ".join((*broker.SCOPES, "email")),
+        }).encode()
+        with mock.patch.object(broker.urllib.request, "urlopen", return_value=response):
+            broker.validate_token_scopes("not-a-real-token")
+
     def test_credentials_are_pinned_to_dedicated_read_directory(self):
         with tempfile.TemporaryDirectory() as temp:
             base = pathlib.Path(temp)
