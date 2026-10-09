@@ -17,6 +17,13 @@ The output cannot authorize sends, commands, purchases, credential changes, URL
 fetches, or any other action. The plugin emits no raw URL, accepts only evidence
 quoted from the screened source, and fails closed on detector/model/schema errors.
 
+Mailreef distinguishes **content risk** from **prompt injection**. A sender asking
+the human recipient to connect, reply, apply, review, sign, pay, upload, download,
+follow a link, reset a password, schedule, or unsubscribe is ordinary email
+content. It may receive a risk label, but it is not blocked as prompt injection
+unless the source attempts to control an AI/agent, override policy, trigger tools,
+obtain secrets, conceal agent-directed instructions, or smuggle encoded commands.
+
 Every source or safety-contract change requires the separate activation checklist
 before that version may be described as live.
 

@@ -16,6 +16,11 @@ native zero-tool Luna completion, strict deterministic validation, and a
 fresh zero-tool Luna relay detector. Raw source and blocked candidates are not
 returned in tool details.
 
+The detector targets agent-directed prompt injection and summary relay, not
+ordinary requests to the human recipient. Human CTAs are returned only in the
+descriptive `The email asks the reader to ...` frame, and every envelope remains
+unable to authorize action.
+
 The broker uses deterministic local tripwires and has no Ollama or local-model
 runtime dependency.
 

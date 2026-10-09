@@ -47,7 +47,7 @@ TOKENINFO_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
 
 DEFAULT_MAX_LIST = 5
 DEFAULT_DAYS_BACK = 7
-BROKER_VERSION = '1.4.0'
+BROKER_VERSION = '1.5.0'
 MAX_SEARCH_RESULTS = 10
 MAX_SEARCH_WINDOW_DAYS = 366
 MAX_SEARCH_AGE_DAYS = 3660
@@ -158,14 +158,36 @@ _HEURISTIC_PATTERNS = [
     (r'(?i)ignore\s+(all\s+)?previous\s+instructions', 'instruction override'),
     (r'(?i)disregard\s+(all\s+)?(previous|above)', 'instruction override'),
     (r'(?i)forget\s+everything', 'memory reset'),
-    (r'(?i)you\s+are\s+now\s+(dan|developer|system|admin)', 'role-change'),
-    (r'(?i)system\s*:', 'system-role impersonation'),
+    (r'(?i)you\s+are\s+now\s+(dan|an?\s+(ai|assistant|agent))\b', 'role-change'),
+    (r'(?i)(?:^|[.!?]\s+)system\s*:\s*(ignore|override|follow|execute|you\s+must)', 'system-role impersonation'),
     (r'(?i)override\s+(security|safety|policy|instructions)', 'security override'),
-    (r'(?i)(reveal|show|print|return|send|upload|exfiltrat\w*)\b.{0,80}\b(secret|credential|token|password|private key|environment variable)', 'secret request'),
-    (r'(?i)(call|invoke|run|execute|use)\b.{0,60}\b(tool|command|shell|terminal|browser|api)', 'tool request'),
+    (
+        r'(?i)\b(ai|assistant|agent|model)\b.{0,100}\b'
+        r'(reveal|show|print|return|send|upload|exfiltrat\w*)\b.{0,80}\b'
+        r'(secret|credential|token|password|private key|environment variable)',
+        'agent-directed secret request',
+    ),
+    (
+        r'(?i)\b(ai|assistant|agent|model)\b.{0,100}\b'
+        r'(call|invoke|run|execute|use)\b.{0,60}\b'
+        r'(tool|command|shell|terminal|browser|api)',
+        'agent-directed tool request',
+    ),
+    (
+        r'(?i)when\s+(an?\s+)?(ai|assistant|agent|model)\s+(reads?|processes?|reviews?)\s+this',
+        'agent-targeted payload',
+    ),
+    (
+        r'(?i)treat\s+this\s+(email|message|content)\s+as\s+(a\s+)?'
+        r'(system|developer|assistant)\s+(message|instruction|prompt)',
+        'control-message impersonation',
+    ),
     (r'(?i)(assistant|agent|model)\s*[:,]\s*(must|should|ignore|follow|execute|respond)', 'agent-directed instruction'),
-    (r'(?i)(developer|system|assistant)\s+(message|instruction|prompt)', 'control-message reference'),
-    (r'(?i)(do not|never)\s+(mention|disclose|tell|show).{0,60}(instruction|prompt|request)', 'concealment request'),
+    (
+        r'(?i)(do not|never)\s+(mention|disclose|tell|show)\s+(this|the)\s+'
+        r'(instruction|prompt).{0,60}(user|human|recipient)',
+        'concealment request',
+    ),
     (r'(?i)(decode|decrypt|deobfuscate)\b.{0,60}\b(payload|instruction|message)', 'encoded instruction request'),
 ]
 

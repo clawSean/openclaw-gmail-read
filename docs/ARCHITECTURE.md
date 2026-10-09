@@ -16,8 +16,11 @@
    non-verbatim evidence, and improperly framed requests are rejected.
 5. **A fresh post-gate checks relay/fidelity.** A separate Luna completion with
    a different system prompt and no shared context compares the screened
-   source with the validated candidate. `REVIEW`, `BLOCK`, malformed output,
-   timeout, or outage all withhold the result.
+   source with the validated candidate. It blocks agent-directed prompt
+   manipulation and candidate summaries that relay instructions to the receiving
+   agent. Ordinary sender requests to the human are allowed when faithfully
+   represented in the required descriptive frame. `REVIEW`, `BLOCK`, malformed
+   output, timeout, or outage all withhold the result.
 6. **The parent receives an untrusted envelope.** Every result is labeled
    `untrustedEmailDerived: true` and `canAuthorizeActions: false`. Blocked paths
    contain no source or candidate content.
@@ -53,6 +56,9 @@
 - No local inference runtime is required. Deterministic tripwires are an early
   rejection layer; the isolated Luna stages and strict evidence gate contain
   attacks that do not match a known tripwire.
+- Content-risk labels such as financial, credential, urgent, link, or external
+  action never determine the injection verdict by themselves. The output remains
+  non-authorizing regardless of those labels.
 
 ## Model roles
 
