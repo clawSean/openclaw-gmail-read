@@ -14,8 +14,11 @@ Gmail readonly → Mac broker → sanitize + deterministic tripwires → zero-to
 ```
 
 The output cannot authorize sends, commands, purchases, credential changes, URL
-fetches, or any other action. The plugin emits no raw URL, accepts only evidence
-quoted from the screened source, and fails closed on detector/model/schema errors.
+fetches, or any other action. After both safety gates pass, the plugin releases
+HTTPS links deterministically as structured `{url, hostname, untrusted}` data;
+the email itself never grants permission to visit them. Mailreef accepts only
+evidence quoted from the screened source and fails closed on detector/model/schema
+errors.
 
 Mailreef distinguishes **content risk** from **prompt injection**. A sender asking
 the human recipient to connect, reply, apply, review, sign, pay, upload, download,

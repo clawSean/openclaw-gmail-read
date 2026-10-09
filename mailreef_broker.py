@@ -47,7 +47,7 @@ TOKENINFO_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
 
 DEFAULT_MAX_LIST = 5
 DEFAULT_DAYS_BACK = 7
-BROKER_VERSION = '1.5.1'
+BROKER_VERSION = '1.6.0'
 MAX_SEARCH_RESULTS = 10
 MAX_SEARCH_WINDOW_DAYS = 366
 MAX_SEARCH_AGE_DAYS = 3660
@@ -145,6 +145,26 @@ def sanitize_email_content(raw_content: str) -> str:
         r'<(?:object|embed|iframe|form|input|button|select|textarea)\b[^>]*>'
         r'.*?(?:</(?:object|embed|iframe|form|input|button|select|textarea)>|$)',
         '', content, flags=re.DOTALL | re.IGNORECASE,
+    )
+    # Preserve HTTPS anchor targets as inert text before removing markup. The
+    # plugin later releases them as structured, explicitly untrusted data; the
+    # email itself still cannot authorize navigation.
+    def _preserve_anchor_target(match: re.Match[str]) -> str:
+        raw_href = next((group for group in match.groups() if group is not None), '')
+        href = raw_href.strip()
+        try:
+            parsed = urllib.parse.urlsplit(href)
+        except ValueError:
+            return ' '
+        if parsed.scheme.lower() != 'https' or not parsed.hostname or parsed.username or parsed.password:
+            return ' '
+        return f' {href} '
+
+    content = re.sub(
+        r'<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))[^>]*>',
+        _preserve_anchor_target,
+        content,
+        flags=re.IGNORECASE,
     )
     content = re.sub(r'<[^>]*>', ' ', content)
     return re.sub(r'\s+', ' ', content).strip()

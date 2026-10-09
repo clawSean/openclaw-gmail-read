@@ -17,5 +17,9 @@ verification, password, and other credential content is not prompt injection by
 itself and may pass only when evidence-backed; agent-directed attempts to obtain
 or reveal secrets remain blocked.
 
+HTTPS links may pass only after both model gates as deterministic structured
+untrusted data. A released link is evidence, not authorization to navigate; the
+calling workflow must already have user authorization for any browser action.
+
 This project is experimental and disabled by default. A passing offline suite is
 not proof that a live account or runtime has been safely configured.

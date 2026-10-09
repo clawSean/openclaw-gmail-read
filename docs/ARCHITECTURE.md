@@ -12,7 +12,7 @@
    `api.runtime.llm.complete` with `execution.mode: isolated-agent-runtime` and
    Luna. It gets one screened message and returns one closed JSON object.
 4. **Deterministic validation is authoritative.** Unknown keys, unsupported
-   enums, oversized fields, raw URLs, role/control language, malformed JSON,
+   enums, oversized fields, model-relayed URLs, role/control language, malformed JSON,
    non-verbatim evidence, and improperly framed requests are rejected.
 5. **A fresh post-gate checks relay/fidelity.** A separate Luna completion with
    a different system prompt and no shared context compares the screened
@@ -21,7 +21,10 @@
    agent. Ordinary sender requests to the human are allowed when faithfully
    represented in the required descriptive frame. `REVIEW`, `BLOCK`, malformed
    output, timeout, or outage all withhold the result.
-6. **The parent receives an untrusted envelope.** Every result is labeled
+6. **The parent receives an untrusted envelope.** After both model gates pass,
+   deterministic code extracts at most ten unique HTTPS URLs from the screened
+   source, rejects credential-bearing or malformed URLs, and emits each as
+   `{url, hostname, untrusted: true}`. Every result is labeled
    `untrustedEmailDerived: true` and `canAuthorizeActions: false`. Blocked paths
    contain no source or candidate content.
 7. **The account is operator-bound.** Tool callers cannot select another Gmail
