@@ -25,6 +25,12 @@
    account. The configured account, broker response account, operation, message
    identifiers, credential directory, and Desktop OAuth client shape are all
    checked before any isolated model call.
+8. **Historical discovery is prose-free.** The caller supplies separate date,
+   sender, and subject fields; the broker constructs the Gmail query and never
+   accepts raw query syntax. Discovery is inbox-only, excludes spam/trash,
+   returns only validated message/thread IDs plus Gmail's internal timestamp,
+   and makes zero model calls. Reading content remains a separate one-message
+   operation through both model gates.
 
 ## Execution controls
 
@@ -41,6 +47,9 @@
 - OAuth refreshes use atomic private-file replacement.
 - Audit failures are fatal; detector prose and exception text are never logged
   or returned.
+- Stable isolated-completion error codes are stage-labeled and allowlisted;
+  provider exception prose is never returned. Unknown failures collapse to a
+  generic fail-closed code.
 - No local inference runtime is required. Deterministic tripwires are an early
   rejection layer; the isolated Luna stages and strict evidence gate contain
   attacks that do not match a known tripwire.

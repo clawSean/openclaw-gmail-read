@@ -1,7 +1,7 @@
 # Mailreef Plugin
 
-OpenClaw plugin layer for Mailreef, the disabled-by-default screened Gmail
-reader.
+OpenClaw plugin layer for Mailreef's prose-free Gmail discovery and screened
+message reader.
 
 It registers:
 
@@ -22,7 +22,9 @@ runtime dependency.
 Defaults:
 
 - account: `sean`
-- maximum scope: 5 messages / 7 days
+- recent scope: 5 messages / 7 days
+- historical discovery: 10 IDs/timestamps, 366-day window, 10-year age floor,
+  sender/subject selector, inbox-only, no pagination
 - summarizer: `openai/gpt-5.6-luna`
 - post-detector: `openai/gpt-5.6-luna`
 - broker: `/Users/Sean/projects/mailreef/mailreef_broker.py`
@@ -33,5 +35,6 @@ Verification:
 npm run check
 ```
 
-This does not activate the plugin or access Gmail. Follow the repository's
-`docs/ACTIVATION.md` only after explicit operator approval.
+This check does not activate the plugin or access Gmail. Follow the repository's
+`docs/ACTIVATION.md` after explicit operator approval for deployment/runtime
+changes.

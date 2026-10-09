@@ -1,9 +1,9 @@
 {
   "name": "mailreef-plugin",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
-  "description": "Mailreef plugin for isolated, pre/post-screened Gmail summaries",
+  "description": "Mailreef plugin for prose-free Gmail discovery and isolated, pre/post-screened summaries",
   "scripts": {
     "check": "node scripts/check.mjs"
   },

@@ -93,6 +93,105 @@ class BrokerSecurityTests(unittest.TestCase):
             result = broker.broker_read("sean", "m1", read_body=True)
         self.assertEqual(result["operation"], "read_body")
 
+    def test_search_rejects_raw_gmail_operators_and_bad_bounds(self):
+        today = broker.datetime.date.today()
+        after = (today - broker.datetime.timedelta(days=30)).isoformat()
+        before = today.isoformat()
+        for field, value in (
+            ("from_filter", "a@b.com OR in:spam"),
+            ("from_filter", "a@b.com\nin:anywhere"),
+            ("subject_contains", 'invoice" OR in:anywhere'),
+            ("subject_contains", "invoice\\old"),
+        ):
+            kwargs = {"after": after, "before": before, "from_filter": "a@b.com"}
+            kwargs[field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                broker.validate_search_filters(**kwargs)
+        with self.assertRaises(ValueError):
+            broker.validate_search_filters(after=after, before=before, from_filter="a@b.com", max_results=11)
+
+    def test_search_requires_selector_for_wide_window(self):
+        today = broker.datetime.date.today()
+        after = (today - broker.datetime.timedelta(days=90)).isoformat()
+        before = today.isoformat()
+        with self.assertRaises(ValueError):
+            broker.validate_search_filters(after=after, before=before)
+        broker.validate_search_filters(after=after, before=before, subject_contains="invoice")
+
+    def test_search_always_scopes_to_inbox_and_excludes_spam_trash(self):
+        today = broker.datetime.date.today()
+        after = (today - broker.datetime.timedelta(days=365)).isoformat()
+        before = today.isoformat()
+        with mock.patch.object(broker, "_gmail_get", return_value={"messages": []}) as gmail:
+            broker._search_messages(
+                "synthetic",
+                after=after,
+                before=before,
+                from_filter="billing@example.com",
+                max_results=10,
+            )
+        params = gmail.call_args.args[2]
+        self.assertEqual(params["labelIds"], ["INBOX"])
+        self.assertEqual(params["includeSpamTrash"], "false")
+        self.assertNotIn("in:anywhere", params["q"])
+
+    def test_search_keeps_operator_like_subject_text_inside_quotes(self):
+        today = broker.datetime.date.today()
+        after = (today - broker.datetime.timedelta(days=30)).isoformat()
+        before = today.isoformat()
+        with mock.patch.object(broker, "_gmail_get", return_value={"messages": []}) as gmail:
+            broker._search_messages(
+                "synthetic",
+                after=after,
+                before=before,
+                subject_contains="invoice-2025 in:anywhere",
+            )
+        params = gmail.call_args.args[2]
+        self.assertIn('subject:"invoice-2025 in:anywhere"', params["q"])
+        self.assertEqual(params["labelIds"], ["INBOX"])
+        self.assertEqual(params["includeSpamTrash"], "false")
+
+    def test_search_response_contains_no_email_authored_text(self):
+        today = broker.datetime.date.today()
+        after = (today - broker.datetime.timedelta(days=365)).isoformat()
+        before = today.isoformat()
+        account = {"can_read": True}
+        with mock.patch.object(broker, "_load_accounts_config", return_value=[{"label": "sean", **account}]), \
+             mock.patch.object(broker, "_get_account", return_value=account), \
+             mock.patch.object(broker, "_get_access_token", return_value="synthetic"), \
+             mock.patch.object(broker, "validate_token_scopes"), \
+             mock.patch.object(broker, "_search_messages", return_value=[{"id": "m1", "threadId": "t1", "subject": "secret subject", "snippet": "secret snippet"}]), \
+             mock.patch.object(broker, "_gmail_get", return_value={"id": "m1", "threadId": "t1", "internalDate": "1760000000000", "payload": {"headers": [{"name": "Date", "value": "forged"}]}}):
+            result = broker.broker_search(
+                "sean",
+                after=after,
+                before=before,
+                subject_contains="invoice",
+            )
+        serialized = json.dumps(result)
+        self.assertEqual(result["operation"], "search")
+        self.assertEqual(result["data"], [{"id": "m1", "threadId": "t1", "internalDate": "1760000000000", "screened": True}])
+        self.assertNotIn("secret subject", serialized)
+        self.assertNotIn("secret snippet", serialized)
+        self.assertNotIn("forged", serialized)
+
+    def test_search_still_requires_can_read(self):
+        today = broker.datetime.date.today()
+        after = (today - broker.datetime.timedelta(days=30)).isoformat()
+        before = today.isoformat()
+        account = {"can_read": False}
+        with mock.patch.object(broker, "_load_accounts_config", return_value=[{"label": "sean", **account}]), \
+             mock.patch.object(broker, "_get_account", return_value=account), \
+             mock.patch.object(broker, "_get_access_token") as token:
+            result = broker.broker_search(
+                "sean",
+                after=after,
+                before=before,
+                subject_contains="invoice",
+            )
+        self.assertEqual(result["status"], "error")
+        token.assert_not_called()
+
     def test_injected_field_is_removed(self):
         with mock.patch.object(broker, "detect_injection", return_value=(True, "attack echoed by model", 0.9)):
             result = broker.screen_fields(

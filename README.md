@@ -1,8 +1,9 @@
 # Mailreef
 
-A protective reef between hostile mail and a tool-capable agent. Mailreef is a
-disabled-by-default OpenClaw plugin that produces bounded Gmail summaries
-without exposing raw email to the parent agent.
+A protective reef between hostile mail and a tool-capable agent. Mailreef is an
+OpenClaw plugin that performs prose-free historical Gmail discovery and produces
+bounded summaries of explicitly selected messages without exposing raw email to
+the parent agent.
 
 ## Security shape
 
@@ -16,7 +17,8 @@ The output cannot authorize sends, commands, purchases, credential changes, URL
 fetches, or any other action. The plugin emits no raw URL, accepts only evidence
 quoted from the screened source, and fails closed on detector/model/schema errors.
 
-This remains disabled until the separate activation checklist is completed.
+Every source or safety-contract change requires the separate activation checklist
+before that version may be described as live.
 
 ## Components
 
@@ -62,10 +64,18 @@ the only retained copy.
 ## Limits
 
 - Gmail read-only only; no send/modify/label/delete capabilities.
-- Maximum 5 messages and 7 days per operation.
+- Recent triage remains capped at 5 messages / 7 days per operation.
+- Historical discovery accepts structured date plus sender/subject filters,
+  returns at most 10 message IDs and Gmail internal timestamps, and makes zero
+  model calls. It exposes no sender, subject, snippet, or body prose.
+- One search window may span at most 366 days and may reach back 10 years.
+  Windows over 31 days require a sender or subject filter. Discovery is
+  inbox-only, excludes spam/trash, and intentionally has no pagination.
+- A selected message ID may then be read through the existing two-stage safety
+  pipeline.
 - Attachments and nested messages are excluded from body extraction.
-- The plugin ships with `activation.onStartup: false` and must remain disabled
-  until the live rollout gate passes.
+- The plugin ships with `activation.onStartup: false`; deployment and runtime
+  activation remain separate operator-controlled steps.
 
 See [Architecture](docs/ARCHITECTURE.md) and [Activation](docs/ACTIVATION.md).
 The exact Google-side setup is in [Google Cloud OAuth Handoff](docs/GCP-OAUTH-HANDOFF.md).

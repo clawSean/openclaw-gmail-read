@@ -8,8 +8,8 @@ const manifest = JSON.parse(await readFile(new URL("openclaw.plugin.json", root)
 const mod = await import(pathToFileURL(new URL("src/index.js", root).pathname));
 
 assert.equal(manifest.id, "mailreef");
-assert.equal(manifest.version, "0.6.0");
-assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.6.0");
+assert.equal(manifest.version, "0.7.0");
+assert.equal(JSON.parse(await readFile(new URL("package.json", root), "utf8")).version, "0.7.0");
 assert.equal(typeof mod.default, "function");
 assert(source.includes("isolated-agent-runtime"));
 assert(!source.includes("unsafe-no-detector"));
@@ -31,7 +31,7 @@ function brokerPayload(body = "Quarterly report is ready. Please review by Frida
   return {
     status: "ok",
     broker: "mailreef_broker",
-    broker_version: "1.3.0",
+    broker_version: "1.4.0",
     account: "sean",
     operation: "read_body",
     data: {
@@ -43,6 +43,19 @@ function brokerPayload(body = "Quarterly report is ready. Please review by Frida
       body, body_verdict: "SAFE",
       aggregate_verdict: "SAFE",
     },
+  };
+}
+
+function brokerSearchPayload() {
+  return {
+    status: "ok",
+    broker: "mailreef_broker",
+    broker_version: "1.4.0",
+    account: "sean",
+    operation: "search",
+    data: [
+      { id: "m-2025", threadId: "t-2025", internalDate: "1760000000000", screened: true },
+    ],
   };
 }
 
@@ -90,8 +103,9 @@ assert.equal(ok.nodeCommand.command, "mailreef.broker");
 assert(ok.policy.commands.includes("mailreef.broker"));
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "dryRun"), false);
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "account"), false);
-assert.equal(ok.tool.parameters.properties.max.maximum, 5);
+assert.equal(ok.tool.parameters.properties.max.maximum, 10);
 assert.equal(ok.tool.parameters.properties.days.maximum, 7);
+assert.equal(Object.hasOwn(ok.tool.parameters.properties, "q"), false);
 assert.equal(Object.hasOwn(ok.tool.parameters.properties, "nodeId"), false);
 const pinnedRequest = mod.normalizeRequest(
   { action: "list", scriptPath: "/tmp/evil.py", python: "/tmp/evil", nodeId: "evil-node", invokeTimeoutMs: 99999999 },
@@ -102,6 +116,12 @@ assert.equal(pinnedRequest.scriptPath, "/trusted/broker.py");
 assert.equal(pinnedRequest.python, "/usr/bin/python3");
 assert.equal(pinnedRequest.timeoutMs, 120000);
 assert.throws(() => mod.normalizeRequest({ account: "jpop" }, { defaultAccount: "sean" }), /ACCOUNT_OVERRIDE_FORBIDDEN/);
+assert.equal(mod.normalizeRequest({ action: "list", max: 10 }, { defaultAccount: "sean" }).max, 5);
+assert.throws(() => mod.normalizeRequest({ action: "search", after: "2025-01-01", before: "2025-12-31" }, { defaultAccount: "sean" }), /SEARCH_SELECTOR_REQUIRED/);
+const searchRequest = mod.normalizeRequest({ action: "search", after: "2025-01-01", before: "2025-12-31", from: "billing@example.com", max: 10 }, { defaultAccount: "sean" });
+assert.equal(searchRequest.action, "search");
+assert.equal(searchRequest.max, 10);
+assert.deepEqual(mod.buildBrokerArgs(searchRequest).slice(-9), ["--search", "--after", "2025-01-01", "--before", "2025-12-31", "--max", "10", "--from", "billing@example.com"]);
 
 const result = await ok.tool.execute("tc-ok", { action: "read_body", messageId: "m-1" });
 assert.equal(result.details.status, "ok");
@@ -123,6 +143,20 @@ assert.deepEqual(ok.calls[1].messages[0].content.includes("candidateSummary"), t
 const postPayload = JSON.parse(ok.calls[1].messages[0].content);
 assert.equal(Object.hasOwn(postPayload.candidateSummary.points[0], "evidence"), false);
 assert.equal(postPayload.candidateSummary.points[0].evidenceVerified, true);
+
+const search = makeApi(brokerSearchPayload(), []);
+const searchResult = await search.tool.execute("tc-search", { action: "search", after: "2025-01-01", before: "2025-12-31", from: "billing@example.com", max: 10 });
+assert.equal(searchResult.details.status, "ok");
+assert.equal(search.calls.length, 0, "historical discovery must make zero model calls");
+assert.match(searchResult.content[0].text, /"emailContentExposed": false/);
+assert.match(searchResult.content[0].text, /"internalDate": "1760000000000"/);
+assert(!searchResult.content[0].text.includes("subject"));
+assert(!searchResult.content[0].text.includes("snippet"));
+const searchUnknown = brokerSearchPayload();
+searchUnknown.data[0].subject = "must not cross";
+const searchUnknownApi = makeApi(searchUnknown, []);
+const searchUnknownResult = await searchUnknownApi.tool.execute("tc-search-unknown", { action: "search", after: "2025-01-01", before: "2025-12-31", from: "billing@example.com" });
+assert.match(searchUnknownResult.details.code, /BROKER_SEARCH_ENTRY_SCHEMA_KEYS/);
 
 const hostileEvidenceText = "Account notice: reset your password at https://example.com/reset";
 const hostileEvidence = makeApi(brokerPayload(hostileEvidenceText), [
@@ -170,6 +204,12 @@ const outageResult = await outage.tool.execute("tc-outage", { action: "read_body
 assert.equal(outageResult.details.status, "failed");
 assert.equal(outageResult.content[0].text, "Mailreef failed closed.");
 assert(!JSON.stringify(outageResult).includes("provider unavailable"));
+assert.equal(outageResult.details.code, "SUMMARIZER_UPSTREAM_FAILURE");
+const codedOutageError = Object.assign(new Error("provider prose must not leak"), { code: "LLM_RUNTIME_UNAVAILABLE" });
+const codedOutage = makeApi(brokerPayload(), [codedOutageError]);
+const codedOutageResult = await codedOutage.tool.execute("tc-coded-outage", { action: "read_body", messageId: "m-1" });
+assert.equal(codedOutageResult.details.code, "SUMMARIZER_UPSTREAM_LLM_RUNTIME_UNAVAILABLE");
+assert(!JSON.stringify(codedOutageResult).includes("provider prose must not leak"));
 
 const skippedPayload = brokerPayload();
 skippedPayload.data.body_verdict = "SKIPPED";

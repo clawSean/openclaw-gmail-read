@@ -31,13 +31,18 @@ live until every item below has a durable receipt.
    `allowModelOverride: true`, and restrict both `allowedModels` and
    `allowedCompletionModels` to that model.
 10. Prove local Gateway execution (or an explicitly configured node identity),
-   append-only audit, and a maximum scope of 5 messages / 7 days.
+    append-only audit, and both bounded modes:
+    - recent triage: at most 5 messages / 7 days;
+    - historical discovery: at most 10 IDs/timestamps, one 366-day window,
+      10-year age floor, structured sender/subject filters, inbox-only, no
+      pagination, no email-authored prose, and zero model calls.
 11. Obtain explicit operator approval before the live config write or Gateway
    restart.
 12. Run one synthetic benign canary, one relay canary, one malformed-output
     canary, and one model-outage canary. The last three must fail closed.
 13. Run `python3 scripts/activation_preflight.py --phase live`, then one bounded
-    real read on the Sean account. Confirm no raw body, URL,
+    real historical discovery and one selected-message read on the Sean account.
+    Confirm discovery returns only IDs/timestamps and no raw body, URL,
     source payload, OAuth material, or detector prose appears in tool details,
     logs, or chat history.
 14. Only then describe the capability as live. Extending to another account is
