@@ -47,7 +47,7 @@ TOKENINFO_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
 
 DEFAULT_MAX_LIST = 5
 DEFAULT_DAYS_BACK = 7
-BROKER_VERSION = '1.5.0'
+BROKER_VERSION = '1.5.1'
 MAX_SEARCH_RESULTS = 10
 MAX_SEARCH_WINDOW_DAYS = 366
 MAX_SEARCH_AGE_DAYS = 3660
@@ -164,7 +164,7 @@ _HEURISTIC_PATTERNS = [
     (
         r'(?i)\b(ai|assistant|agent|model)\b.{0,100}\b'
         r'(reveal|show|print|return|send|upload|exfiltrat\w*)\b.{0,80}\b'
-        r'(secret|credential|token|password|private key|environment variable)',
+        r'(secret|credential|token|password|one-time code|verification code|mfa code|otp|private key|environment variable)',
         'agent-directed secret request',
     ),
     (

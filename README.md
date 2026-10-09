@@ -23,6 +23,13 @@ follow a link, reset a password, schedule, or unsubscribe is ordinary email
 content. It may receive a risk label, but it is not blocked as prompt injection
 unless the source attempts to control an AI/agent, override policy, trigger tools,
 obtain secrets, conceal agent-directed instructions, or smuggle encoded commands.
+Faithfully extracted human-facing data such as OTP, MFA, and verification codes
+is ordinary email content and may pass the screened envelope; it does not become
+prompt injection merely because it is sensitive.
+
+`canAuthorizeActions: false` means the email itself cannot grant permission. It
+does not prevent using screened email data inside a workflow the user already
+explicitly authorized.
 
 Every source or safety-contract change requires the separate activation checklist
 before that version may be described as live.
