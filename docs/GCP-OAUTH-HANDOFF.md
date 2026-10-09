@@ -3,6 +3,11 @@
 This is the only browser-side setup JPop must perform for the Sean read lane.
 The Google Cloud project may be new or existing. The OAuth client must be new.
 
+**Completed 2026-10-08:** project `sean-mailreef`, Gmail API, External/Testing
+consent, exact read-plus-identity scopes, Sean test user, and separate Desktop
+client `mailreef-sean`. The client JSON was downloaded on JPop's computer; it
+has not yet been transferred to ClawPop or used for OAuth.
+
 ## Required Google configuration
 
 1. Create a dedicated project named **Sean Mailreef**. Use a globally unique
@@ -28,8 +33,9 @@ requires. Do not broaden scopes to avoid that process.
 
 ## Sean's local handoff
 
-After JPop supplies the downloaded Desktop client JSON locally, Sean runs the
-PKCE bootstrap with the expected Sean account. The bootstrap:
+After JPop transfers the downloaded Desktop client JSON to ClawPop through a
+private local route, Sean runs the PKCE bootstrap with expected account
+`seancrustacean@gmail.com`. The bootstrap:
 
 - requests only `gmail.readonly`, `openid`, and `userinfo.email`;
 - verifies the account that approved consent;
